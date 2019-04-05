@@ -1,0 +1,33 @@
+TRUNK
+-----
+Add recognition for TAG(NUMBER) for FILE tags.
+
+
+Version 1.1.0 - 13/6/2014
+-------------------------
+Select tag text after lookup.
+
+Automatically adjust column width based on the text.
+
+Allow 'sort' of tags using column headers.
+
+Add icon for FILE tag.
+
+Automatically lookup for files even if extension is not in selection.
+
+If tag is of type FILE and is followed with :NUMBER  automatically go to this
+line number.
+
+Search for the tag in the Scintilla document rather than the source file on disk
+so correct line will be found in modified files.
+
+Adjust windows size to screen resolution.
+
+Better handling for multi monitor setup.
+
+Go to exact position for 'Back' and 'Forward' rather then start of line.
+
+
+Version 1.0.1
+-------------
+Allow absolute path search for /cygwin/ paths.
