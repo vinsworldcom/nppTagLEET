@@ -69,6 +69,7 @@ public:
     const char *Tag;
     const char *FileName;
     const char *ExCmd;
+    const char *ExtFields;
     TagKind Kind;
     TagListItem *Next;
   };

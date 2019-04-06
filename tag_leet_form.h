@@ -48,7 +48,7 @@ private:
     void (*ModifyStr)(const char **Str, int *StrSize) = NULL);
   TL_ERR SetListFromTag(TagLookupContext *TLCtx);
   void UpdateColumnWidths(int MaxTagWidth, int MaxFilenameWidth,
-    int MaxExCmdWidth);
+    int MaxExCmdWidth, int MaxExtFieldsWidth);
   TL_ERR PopulateTagListHelper(TagLookupContext *TLCtx, TagFile *tf);
   TL_ERR PopulateTagList(TagLookupContext *TLCtx);
   void GoToSelectedTag();
@@ -71,6 +71,7 @@ private:
   int LastMaxTagWidth;
   int LastMaxFilenameWidth;
   int LastMaxExCmdWidth;
+  int LastMaxExtFieldsWidth;
   bool NeedUpdateColumns;
 
   /* Location in NPP file during tag open. If we end up 'going' to a tag's
@@ -86,7 +87,8 @@ private:
 enum {
   COLUMN_TAG = 0,
   COLUMN_FILENAME,
-  COLUMN_EXCMD
+  COLUMN_EXCMD,
+  COLUMN_EXTFIELDS
 };
 
 } /* namespace TagLEET_NPP */
