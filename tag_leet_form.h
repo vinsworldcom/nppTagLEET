@@ -67,7 +67,7 @@ private:
   TagList TList;
   UINT KindToIndex[TAG_KIND_LAST];
   bool DoPrefixMatch;
-  uint8_t SortOrder[3];
+  uint8_t SortOrder[4];
   int LastMaxTagWidth;
   int LastMaxFilenameWidth;
   int LastMaxExCmdWidth;
