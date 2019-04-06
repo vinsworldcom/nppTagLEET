@@ -300,13 +300,7 @@ static void CleanExtFields(const char **StrPtr, int *StrSizePtr)
 {
   const char *Str = *StrPtr;
   int StrSize = *StrSizePtr;
-
-  while (StrSize > 0 && Str[0] == ' ' || Str[0] == '\t')
-  {
-    Str++;
-    StrSize--;
-  }
-
+// TODO:2019-04-06:MVINCENT: parse out what we want, e.g., remove "line:"
   *StrPtr = Str;
   *StrSizePtr = StrSize;
 }
@@ -431,6 +425,7 @@ int CALLBACK TagLeetForm::LvSortFunc(LPARAM Item1Ptr, LPARAM Item2Ptr,
         CompVal = comp_str(str1, length1, str2, length2,
           Form->TList.TagsCaseInsensitive);
         break;
+// TODO:2019-04-06:MVINCENT: if extras is only line number, need numeric sort here
       case COLUMN_EXTFIELDS:
         str1 = Item1->ExtFields;
         length1 = (int)::strlen(str1);
