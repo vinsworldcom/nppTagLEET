@@ -298,7 +298,17 @@ void TagLeetForm::PostCloseMsg() const
 
 static void CleanExtFields(const char **StrPtr, int *StrSizePtr)
 {
-// TODO:2019-04-06:MVINCENT:    
+  const char *Str = *StrPtr;
+  int StrSize = *StrSizePtr;
+
+  while (StrSize > 0 && Str[0] == ' ' || Str[0] == '\t')
+  {
+    Str++;
+    StrSize--;
+  }
+
+  *StrPtr = Str;
+  *StrSizePtr = StrSize;
 }
 
 static void CleanExCmd(const char **StrPtr, int *StrSizePtr)
@@ -829,7 +839,7 @@ TL_ERR TagLeetForm::SetListFromTag(TagLookupContext *TLCtx)
     SetItemText(LvIdx, COLUMN_TAG, Item->Tag, &MaxTagWidth);
     SetItemText(LvIdx, COLUMN_FILENAME, Item->FileName, &MaxFilenameWidth, ::FileFromPath);
     SetItemText(LvIdx, COLUMN_EXCMD, Item->ExCmd, &MaxExCmdWidth, ::CleanExCmd);
-// TODO:2019-04-06:MVINCENT:    SetItemText(LvIdx, COLUMN_EXTFIELDS, Item->ExtFields, &MaxExtFieldsWidth, ::CleanExtFields);
+    SetItemText(LvIdx, COLUMN_EXTFIELDS, Item->ExtFields, &MaxExtFieldsWidth, ::CleanExtFields);
   }
 
   if (Idx > 0)

@@ -104,7 +104,7 @@ TL_ERR TagList::Create(const char *Tag, const char *in_TagsFilePath,
 
   while (Count < MaxItemCount)
   {
-    uint32_t ExCmdCopySize;
+    uint32_t ExCmdCopySize, ExtFieldsCopySize;
     TagLineProperties Props;
     TagListItem *NewItem;
 
@@ -120,6 +120,14 @@ TL_ERR TagList::Create(const char *Tag, const char *in_TagsFilePath,
       while (ExCmdCopySize > 0 && Props.ExCmd[ExCmdCopySize - 1] == '\\')
         ExCmdCopySize--;
     }
+    ExtFieldsCopySize = Props.ExtFieldsSize;
+    if (Props.ExtFieldsSize > 1024)
+    {
+      /* Trim ExCmd but don't let it end with the special char '\\' */
+      ExtFieldsCopySize = 1024;
+      while (ExtFieldsCopySize > 0 && Props.ExtFields[ExtFieldsCopySize - 1] == '\\')
+        ExtFieldsCopySize--;
+    }
 
     NewItem = (TagListItem *)NodeMem.Alloc(sizeof(*NewItem));
     if (NewItem == NULL)
@@ -128,7 +136,9 @@ TL_ERR TagList::Create(const char *Tag, const char *in_TagsFilePath,
     NewItem->Tag = StrMem.StrDup(Props.Tag, Props.TagSize);
     NewItem->FileName = StrMem.StrDup(Props.FileName, Props.FileNameSize);
     NewItem->ExCmd = StrMem.StrDup(Props.ExCmd, ExCmdCopySize);
-    if (NewItem->Tag == NULL || NewItem->FileName == NULL || NewItem->ExCmd == NULL)
+    NewItem->ExtFields = StrMem.StrDup(Props.ExtFields, ExtFieldsCopySize);
+    if (NewItem->Tag == NULL || NewItem->FileName == NULL || 
+      NewItem->ExCmd == NULL || NewItem->ExtFields == NULL)
       break;
 
     NewItem->Kind = Props.Kind;
