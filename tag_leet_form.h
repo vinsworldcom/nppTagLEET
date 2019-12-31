@@ -48,6 +48,7 @@ private:
     void (*ModifyStr)(const char **Str, int *StrSize) = NULL);
   TL_ERR SetListFromTag(TagLookupContext *TLCtx);
   void UpdateColumnWidths(int MaxTagWidth, int MaxFilenameWidth,
+    int MaxExtTypeWidth, int MaxExtLineWidth,
     int MaxExCmdWidth, int MaxExtFieldsWidth);
   TL_ERR PopulateTagListHelper(TagLookupContext *TLCtx, TagFile *tf);
   TL_ERR PopulateTagList(TagLookupContext *TLCtx);
@@ -67,10 +68,12 @@ private:
   TagList TList;
   UINT KindToIndex[TAG_KIND_LAST];
   bool DoPrefixMatch;
-  uint8_t SortOrder[4];
+  uint8_t SortOrder[6];
   int LastMaxTagWidth;
   int LastMaxFilenameWidth;
   int LastMaxExCmdWidth;
+  int LastMaxExtTypeWidth;
+  int LastMaxExtLineWidth;
   int LastMaxExtFieldsWidth;
   bool NeedUpdateColumns;
 
@@ -88,6 +91,8 @@ enum {
   COLUMN_TAG = 0,
   COLUMN_FILENAME,
   COLUMN_EXCMD,
+  COLUMN_EXTTYPE,
+  COLUMN_EXTLINE,
   COLUMN_EXTFIELDS
 };
 

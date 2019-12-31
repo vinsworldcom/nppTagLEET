@@ -116,6 +116,10 @@ struct TagLineProperties {
   uint32_t FileNameSize;
   const char *ExCmd;
   uint32_t ExCmdSize;
+  const char *ExtType;
+  uint32_t ExtTypeSize;
+  const char *ExtLine;
+  uint32_t ExtLineSize;
   const char *ExtFields;
   uint32_t ExtFieldsSize;
   TagKind Kind;
