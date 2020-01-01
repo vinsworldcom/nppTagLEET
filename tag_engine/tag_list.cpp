@@ -122,23 +122,23 @@ TL_ERR TagList::Create(const char *Tag, const char *in_TagsFilePath,
         ExCmdCopySize--;
     }
 
-//    ExtTypeCopySize = Props.ExtTypeSize;
-//    if (Props.ExtTypeSize > 1024)
-//   {
-//      /* Trim ExCmd but don't let it end with the special char '\\' */
-//     ExtTypeCopySize = 1024;
-//      while (ExtTypeCopySize > 0 && Props.ExtType[ExtTypeCopySize - 1] == '\\')
-//        ExtTypeCopySize--;
-//    }
-//
-//    ExtLineCopySize = Props.ExtLineSize;
-//    if (Props.ExtLineSize > 1024)
-//    {
-//      /* Trim ExCmd but don't let it end with the special char '\\' */
-//      ExtLineCopySize = 1024;
-//      while (ExtLineCopySize > 0 && Props.ExtLine[ExtLineCopySize - 1] == '\\')
-//        ExtLineCopySize--;
-//    }
+//     ExtTypeCopySize = Props.ExtTypeSize;
+//     if (Props.ExtTypeSize > 1024)
+//     {
+//       /* Trim ExCmd but don't let it end with the special char '\\' */
+//      ExtTypeCopySize = 1024;
+//       while (ExtTypeCopySize > 0 && Props.ExtType[ExtTypeCopySize - 1] == '\\')
+//         ExtTypeCopySize--;
+//     }
+//     
+//     ExtLineCopySize = Props.ExtLineSize;
+//     if (Props.ExtLineSize > 1024)
+//     {
+//       /* Trim ExCmd but don't let it end with the special char '\\' */
+//       ExtLineCopySize = 1024;
+//       while (ExtLineCopySize > 0 && Props.ExtLine[ExtLineCopySize - 1] == '\\')
+//         ExtLineCopySize--;
+//     }
 
     ExtFieldsCopySize = Props.ExtFieldsSize;
     if (Props.ExtFieldsSize > 1024)
