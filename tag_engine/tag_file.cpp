@@ -21,6 +21,7 @@
 #include "file_reader.h"
 #include "avl.h"
 
+#include <windows.h>
 #include <malloc.h>
 #include <memory.h>
 #include <string.h>
@@ -770,6 +771,49 @@ TL_ERR TagIterator::GetNextTagLine(const char **Line, uint32_t *LineSize)
   }
 }
 
+void find_line_num(const char *ExtStr, uint32_t ExtStrSize, TagLineProperties *Props)
+{
+  uint32_t start, i;
+
+  start = i = 0;
+  for(;;)
+  {
+    if (i < ExtStrSize && ExtStr[i] != '\t')
+    {
+      i++;
+      continue;
+    }
+
+    if (i - start >= 6 && ::memcmp(ExtStr + start, "line:", 5) == 0)
+    {
+      Props->ExtLine = ExtStr + start + 5;
+      Props->ExtLineSize = i - 5;
+
+      Props->ExtFieldsSize -= ( start + i );
+      if ( Props->ExtFieldsSize <= 0 )
+      {
+          Props->ExtFields = "";
+          Props->ExtFieldsSize = 0;
+      }
+      else
+          Props->ExtFields = ExtStr + start + i;
+
+      break;
+    }
+    else if (i == ExtStrSize)
+    {
+      break;
+    }
+    else
+    {
+      start = i + 1;
+      i = start;
+      continue;
+    }
+  }
+  return;    
+}
+
 static TagKind get_tag_kind(const char *ExtStr, uint32_t ExtStrSize, TagLineProperties *Props)
 {
   uint32_t start, i;
@@ -788,8 +832,11 @@ static TagKind get_tag_kind(const char *ExtStr, uint32_t ExtStrSize, TagLineProp
     {
       kind_char = ExtStr[start];
       Props->ExtFieldsSize -= 1;
-      if ( Props->ExtFieldsSize == 0 )
+      if ( Props->ExtFieldsSize <= 0 )
+      {
           Props->ExtFields = "";
+          Props->ExtFieldsSize = 0;
+      }
       else
           Props->ExtFields = ExtStr + start + 1;
     }
@@ -797,8 +844,11 @@ static TagKind get_tag_kind(const char *ExtStr, uint32_t ExtStrSize, TagLineProp
     {
       kind_char = ExtStr[start+5];
       Props->ExtFieldsSize -= 6;
-      if ( Props->ExtFieldsSize == 0 )
+      if ( Props->ExtFieldsSize <= 0 )
+      {
           Props->ExtFields = "";
+          Props->ExtFieldsSize = 0;
+      }
       else
           Props->ExtFields = ExtStr + start + 6;
     }
@@ -900,5 +950,9 @@ TL_ERR TagIterator::GetTagLineProps(TagLineProperties *Props) const
   Props->ExtLineSize = 1;
 
   Props->Kind = get_tag_kind(Props->ExtFields, Props->ExtFieldsSize, Props);
+
+  if ( Props->ExtFieldsSize > 0 )
+    find_line_num(Props->ExtFields, Props->ExtFieldsSize, Props);
+
   return TL_ERR_OK;
 }
