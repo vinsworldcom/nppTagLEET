@@ -884,10 +884,10 @@ TL_ERR TagIterator::GetTagLineProps(TagLineProperties *Props) const
   }
 
 // TODO:2019-12-31:MVINCENT: These must be parsed
-  Props->ExtType = NULL;
-  Props->ExtTypeSize = 0;
-  Props->ExtLine = NULL;
-  Props->ExtLineSize = 0;
+  Props->ExtType = " ";
+  Props->ExtTypeSize = 1;
+  Props->ExtLine = " ";
+  Props->ExtLineSize = 1;
 
   Props->Kind = get_tag_kind(Props->ExtFields, Props->ExtFieldsSize);
   return TL_ERR_OK;

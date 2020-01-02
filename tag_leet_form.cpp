@@ -773,8 +773,8 @@ TL_ERR TagLeetForm::PopulateTagList(TagLookupContext *TLCtx)
 }
 
 void TagLeetForm::UpdateColumnWidths(int MaxTagWidth, int MaxFilenameWidth,
-  int MaxExtTypeWidth, int MaxExtLineWidth,
-  int MaxExCmdWidth, int MaxExtFieldsWidth)
+    int MaxExCmdWidth, int MaxExtTypeWidth, 
+    int MaxExtLineWidth, int MaxExtFieldsWidth)
 {
   RECT Rect;
   int TotalWidth, MaxWidth;
@@ -812,9 +812,9 @@ void TagLeetForm::UpdateColumnWidths(int MaxTagWidth, int MaxFilenameWidth,
   if (TotalWidth < MaxWidth)
   {
     /* Try default 40%-30%-30% */
-    TagWidth = MaxWidth * 25 / 100;
+    TagWidth = MaxWidth * 15 / 100;
     FilenameWidth = MaxWidth * 20 / 100;
-    ExCmdWidth = MaxWidth * 30 / 100;
+    ExCmdWidth = MaxWidth * 40 / 100;
     ExtTypeWidth = MaxWidth * 5 / 100;
     ExtLineWidth = MaxWidth * 5 / 100;
     ExtFieldsWidth = MaxWidth - TagWidth - FilenameWidth - ExCmdWidth - ExtTypeWidth - ExtLineWidth;
@@ -827,6 +827,9 @@ void TagLeetForm::UpdateColumnWidths(int MaxTagWidth, int MaxFilenameWidth,
       TagWidth = MaxTagWidth + Extra;
       FilenameWidth = MaxFilenameWidth + Extra;
       ExCmdWidth = MaxExCmdWidth + Extra;
+      ExtTypeWidth = MaxExtTypeWidth + Extra;
+      ExtLineWidth = MaxExtLineWidth + Extra;
+      ExtFieldsWidth = MaxExtFieldsWidth + Extra;
     }
   }
   else
@@ -837,9 +840,7 @@ void TagLeetForm::UpdateColumnWidths(int MaxTagWidth, int MaxFilenameWidth,
       Remaining * 35 / 100;
     Remaining -= TagWidth;
     /* Give filename up to 80% of the remaining width */
-    // FilenameWidth = MaxFilenameWidth * 100 <= Remaining * 80 ? MaxFilenameWidth :
-      // Remaining * 80 / 100;
-    ExCmdWidth = MaxExCmdWidth * 100 <= Remaining * 80 ? MaxExCmdWidth :
+    FilenameWidth = MaxFilenameWidth * 100 <= Remaining * 80 ? MaxFilenameWidth :
       Remaining * 80 / 100;
   }
 
@@ -893,8 +894,8 @@ TL_ERR TagLeetForm::SetListFromTag(TagLookupContext *TLCtx)
     SetItemText(LvIdx, COLUMN_TAG, Item->Tag, &MaxTagWidth);
     SetItemText(LvIdx, COLUMN_FILENAME, Item->FileName, &MaxFilenameWidth, ::FileFromPath);
     SetItemText(LvIdx, COLUMN_EXCMD, Item->ExCmd, &MaxExCmdWidth, ::CleanExCmd);
-    // SetItemText(LvIdx, COLUMN_EXTTYPE, Item->ExtType, &MaxExtTypeWidth, ::CleanExtType);
-    // SetItemText(LvIdx, COLUMN_EXTLINE, Item->ExtLine, &MaxExtLineWidth, ::CleanExtLine);
+    SetItemText(LvIdx, COLUMN_EXTTYPE, Item->ExtType, &MaxExtTypeWidth, ::CleanExtType);
+    SetItemText(LvIdx, COLUMN_EXTLINE, Item->ExtLine, &MaxExtLineWidth, ::CleanExtLine);
     SetItemText(LvIdx, COLUMN_EXTFIELDS, Item->ExtFields, &MaxExtFieldsWidth, ::CleanExtFields);
   }
 
