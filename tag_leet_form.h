@@ -48,8 +48,8 @@ private:
     void (*ModifyStr)(const char **Str, int *StrSize) = NULL);
   TL_ERR SetListFromTag(TagLookupContext *TLCtx);
   void UpdateColumnWidths(int MaxTagWidth, int MaxFilenameWidth,
-    int MaxExtTypeWidth, int MaxExtLineWidth,
-    int MaxExCmdWidth, int MaxExtFieldsWidth);
+    int MaxExCmdWidth, int MaxExtTypeWidth,
+    int MaxExtLineWidth, int MaxExtFieldsWidth);
   TL_ERR PopulateTagListHelper(TagLookupContext *TLCtx, TagFile *tf);
   TL_ERR PopulateTagList(TagLookupContext *TLCtx);
   void GoToSelectedTag();
