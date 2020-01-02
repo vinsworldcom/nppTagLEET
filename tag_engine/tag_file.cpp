@@ -21,7 +21,6 @@
 #include "file_reader.h"
 #include "avl.h"
 
-#include <windows.h>
 #include <malloc.h>
 #include <memory.h>
 #include <string.h>
@@ -789,7 +788,7 @@ void find_line_num(const char *ExtStr, uint32_t ExtStrSize, TagLineProperties *P
       Props->ExtLine = ExtStr + start + 5;
       Props->ExtLineSize = i - 5;
 
-      Props->ExtFieldsSize -= ( start + i );
+      Props->ExtFieldsSize -= i;
       if ( Props->ExtFieldsSize <= 0 )
       {
           Props->ExtFields = "";
@@ -943,7 +942,7 @@ TL_ERR TagIterator::GetTagLineProps(TagLineProperties *Props) const
     Props->ExtFieldsSize = 0;
   }
 
-// TODO:2019-12-31:MVINCENT: These must be parsed
+  // These are be parsed in the following function calls
   Props->ExtType = " ";
   Props->ExtTypeSize = 1;
   Props->ExtLine = " ";
