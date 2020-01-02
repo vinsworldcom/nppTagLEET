@@ -787,14 +787,20 @@ static TagKind get_tag_kind(const char *ExtStr, uint32_t ExtStrSize, TagLineProp
     if (i - start == 1)
     {
       kind_char = ExtStr[start];
-      Props->ExtFields = ExtStr + start + 1;
       Props->ExtFieldsSize -= 1;
+      if ( Props->ExtFieldsSize == 0 )
+          Props->ExtFields = "";
+      else
+          Props->ExtFields = ExtStr + start + 1;
     }
     else if (i - start == 6 && ::memcmp(ExtStr + start, "kind:", 5) == 0)
     {
       kind_char = ExtStr[start+5];
-      Props->ExtFields = ExtStr + start + 6;
       Props->ExtFieldsSize -= 6;
+      if ( Props->ExtFieldsSize == 0 )
+          Props->ExtFields = "";
+      else
+          Props->ExtFields = ExtStr + start + 6;
     }
     else if (i == ExtStrSize)
     {
