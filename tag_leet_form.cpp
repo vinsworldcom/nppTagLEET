@@ -19,6 +19,7 @@
 
 #include "tag_leet_form.h"
 
+#include <stdlib.h>
 #include <tchar.h>
 #include <commctrl.h>
 #include <malloc.h>
@@ -390,6 +391,20 @@ static int comp_str(const char *str1, int length1,
   return comp_val;
 }
 
+static int comp_num(const char *str1, const char *str2)
+{
+  int comp_val = 0;
+  int num1 = atoi( str1 );
+  int num2 = atoi( str2 );
+
+  if ( num1 < num2 )
+      comp_val = -1;
+  else if ( num1 > num2 )
+      comp_val = 1;
+
+  return comp_val;
+}
+
 /* First compare file names, if identical compare full path. */
 static int comp_file_paths(const char *path1, int path_length1,
   const char *path2, int path_length2, bool case_insensitive)
@@ -461,14 +476,10 @@ int CALLBACK TagLeetForm::LvSortFunc(LPARAM Item1Ptr, LPARAM Item2Ptr,
         CompVal = comp_str(str1, length1, str2, length2,
           Form->TList.TagsCaseInsensitive);
         break;
-// TODO:2019-04-06:MVINCENT: if extras is only line number, need numeric sort here
       case COLUMN_EXTLINE:
         str1 = Item1->ExtLine;
-        length1 = (int)::strlen(str1);
         str2 = Item2->ExtLine;
-        length2 = (int)::strlen(str2);
-        CompVal = comp_str(str1, length1, str2, length2,
-          Form->TList.TagsCaseInsensitive);
+        CompVal = comp_num(str1, str2);
         break;
       case COLUMN_EXTFIELDS:
         str1 = Item1->ExtFields;
