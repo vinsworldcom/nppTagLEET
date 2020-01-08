@@ -19,9 +19,11 @@
 
 #include "tag_leet_app.h"
 #include "tag_leet_form.h"
+#include "Notepad_plus_msgs.h"
 #include <tchar.h>
 #include <stdio.h>
 #include <malloc.h>
+#include <shlwapi.h>
 #include "resource.h"
 
 #define DEFAULT_SCREEN_HEIGHT 1024
@@ -38,6 +40,13 @@ static TCHAR AboutText[] =
 
 const TCHAR TagLeetApp::WindowClassName[] = TEXT("TagLEET-form");
 const uint8_t TagLeetApp::TestEolArr[2] = {10, 13};
+
+TCHAR iniFilePath[MAX_PATH];
+const TCHAR configFileName[]  = TEXT( "TagLEET.ini" );
+const TCHAR sectionName[]     = TEXT( "Settings" );
+const TCHAR iniUseNppColors[] = TEXT( "UseNppColors" );
+
+bool g_useNppColors = false;
 
 TagLeetApp::TagLeetApp(const struct NppData *NppDataObj)
 {
@@ -72,6 +81,20 @@ TagLeetApp::TagLeetApp(const struct NppData *NppDataObj)
   ListViewFont = CreateListViewFont();
   FormScale = 100;
   HeightWidthValid = false;
+
+  ::SendMessage( NppHndl, NPPM_GETPLUGINSCONFIGDIR, MAX_PATH,
+                 ( LPARAM )iniFilePath );
+
+  // if config path doesn't exist, we create it
+  if ( PathFileExists( iniFilePath ) == FALSE )
+      ::CreateDirectory( iniFilePath, NULL );
+
+  // make your plugin config file full file path name
+  PathAppend( iniFilePath, configFileName );
+
+  // get the parameter value from plugin config
+  g_useNppColors = ::GetPrivateProfileInt( sectionName, iniUseNppColors, 0,
+                   iniFilePath );
 }
 
 TagLeetApp::~TagLeetApp()
@@ -105,6 +128,8 @@ void TagLeetApp::Shutdown()
     Unlock();
     return;
   }
+  ::WritePrivateProfileString( sectionName, iniUseNppColors,
+                               g_useNppColors ? TEXT( "1" ) : TEXT( "0" ), iniFilePath );
 
   delete this;
 }
@@ -447,6 +472,15 @@ void TagLeetApp::ShowAbout() const
   {
     ::MessageBox(NppHndl, AboutText, TEXT("About TagLEET"), MB_OK);
   }
+}
+
+HWND TagLeetApp::getCurrScintilla()
+{
+  int which = -1;
+  ::SendMessage( this->NppHndl, NPPM_GETCURRENTSCINTILLA, 0,
+                 ( LPARAM )&which );
+  return ( which == 0 ) ? this->SciMainHndl :
+         this->SciSecHndl;
 }
 
 TlAppSync::TlAppSync(TagLeetApp *in_Obj)

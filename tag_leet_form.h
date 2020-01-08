@@ -62,6 +62,9 @@ private:
   void SetColumnSortArrow(int ColumnIdx, bool Show, bool Down=false);
   void ResizeForm(int change);
   void ResizeListViewFont(int change, bool reset);
+  void SetNppColors();
+  void SetSysColors();
+  void ChangeColors();
   void OnResize();
 
   TagLeetApp *App;
@@ -76,6 +79,8 @@ private:
   int LastMaxExtLineWidth;
   int LastMaxExtFieldsWidth;
   bool NeedUpdateColumns;
+  COLORREF colorFg;
+  COLORREF colorBg;
 
   /* Location in NPP file during tag open. If we end up 'going' to a tag's
    * location this location will be pushed into the 'Back' queue */

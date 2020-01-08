@@ -18,6 +18,7 @@
 */
 
 #include "tag_leet_form.h"
+#include "scintilla.h"
 
 #include <stdlib.h>
 #include <tchar.h>
@@ -27,6 +28,8 @@
 #include "resource.h"
 
 using namespace TagLEET_NPP;
+
+extern bool g_useNppColors;
 
 #define SORT_UP_IMG_IDX    13
 #define SORT_DOWN_IMG_IDX  14
@@ -47,6 +50,11 @@ TagLeetForm::TagLeetForm(NppCallContext *NppC)
   LastMaxFilenameWidth = 0;
   LastMaxExCmdWidth = 0;
   NeedUpdateColumns = false;
+
+  if ( g_useNppColors )
+      SetNppColors();
+  else
+      SetSysColors();
 
   ::memset(KindToIndex, 0, sizeof(KindToIndex));
   KindToIndex[TAG_KIND_UNKNOWN] = (UINT)-1;
@@ -198,6 +206,31 @@ void TagLeetForm::ResizeListViewFont(int change, bool reset)
       RDW_ERASE  | RDW_INVALIDATE | RDW_ALLCHILDREN);
 }
 
+void TagLeetForm::SetNppColors()
+{
+  colorFg = ( COLORREF )::SendMessage( App->getCurrScintilla(), SCI_STYLEGETFORE, 0, 0 );
+  colorBg = ( COLORREF )::SendMessage( App->getCurrScintilla(), SCI_STYLEGETBACK, 0, 0 );
+}
+
+void TagLeetForm::SetSysColors()
+{
+  colorFg = GetSysColor(COLOR_INFOTEXT);
+  colorBg = GetSysColor(COLOR_INFOBK);
+}
+
+void TagLeetForm::ChangeColors()
+{
+  ::SendMessage(LViewHWnd, WM_SETREDRAW, FALSE, 0);
+
+  ListView_SetBkColor(LViewHWnd, colorBg );
+  ListView_SetTextBkColor(LViewHWnd, colorBg);
+  ListView_SetTextColor(LViewHWnd, colorFg);
+
+  ::SendMessage(LViewHWnd, WM_SETREDRAW, TRUE, 0);
+  ::RedrawWindow(LViewHWnd, NULL, NULL,
+    RDW_ERASE  | RDW_INVALIDATE | RDW_ALLCHILDREN);
+}
+
 /* Called from WM_CREATE message of Form window. Note that at this point
  * CreateWindow of the Form Window has not returned yet so FormHWnd is NULL */
 TL_ERR TagLeetForm::CreateListView(HWND hwnd)
@@ -277,8 +310,7 @@ TL_ERR TagLeetForm::CreateListView(HWND hwnd)
   rc = ListView_InsertColumn(LViewHWnd, 5, &LvCol);
   err = rc == -1 && !err ? TL_ERR_GENERAL : err;
 
-  ListView_SetBkColor(LViewHWnd, GetSysColor(COLOR_INFOBK));
-  ListView_SetTextBkColor(LViewHWnd, GetSysColor(COLOR_INFOBK));
+  ChangeColors();
   return err;
 }
 
@@ -596,6 +628,19 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
               {
                 ResizeForm(-10);
               }
+              break;
+            case VK_MULTIPLY:
+              if (::GetKeyState(VK_CONTROL) & 0x8000)
+              {
+                SetNppColors();
+                g_useNppColors = true;
+              }
+              else
+              {
+                SetSysColors();
+                g_useNppColors = false;
+              }
+              ChangeColors();
               break;
             case VK_DIVIDE:
               if (::GetKeyState(VK_CONTROL) & 0x8000)

@@ -93,6 +93,7 @@ public:
   HINSTANCE GetInstance() const { return InstanceHndl; }
   void DetachForm(TagLeetForm *Form, bool *DestroyApp);
   void ShowAbout() const;
+  HWND getCurrScintilla();
   HFONT GetStatusFont() const { return StatusFont; }
   HFONT GetListViewFont() const { return ListViewFont; }
   int GetStatusHeight() const { return StatusHeight; }
