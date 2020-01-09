@@ -20,8 +20,12 @@
 #include "tag_leet_app.h"
 #include "tag_leet_form.h"
 #include "Notepad_plus_msgs.h"
+#include "Scintilla.h"
+
 #include <tchar.h>
 #include <stdio.h>
+#include <string>
+
 #include <malloc.h>
 #include <shlwapi.h>
 #include "resource.h"
@@ -464,6 +468,128 @@ void TagLeetApp::GoForward()
     GoToFileLine(Loc);
     ::free(Loc);
   }
+}
+
+// Following 2 are ported from tag_leet_form.cpp to put in our namespace
+// since we call them from AutoComplete()
+TL_ERR TagLeetApp::PopulateTagListHelper(TagLookupContext *TLCtx, TagFile *tf)
+{
+  TL_ERR err;
+  char SavedChar;
+  char *Tag = TLCtx->TextBuff + TLCtx->TagOffset;
+
+  SavedChar = Tag[TLCtx->TagLength];
+  /* Ensure Tag is NULL terminated */
+  Tag[TLCtx->TagLength] = '\0';
+  err = TList.Create(Tag, TLCtx->TagsFilePath, tf, DoPrefixMatch);
+  Tag[TLCtx->TagLength] = SavedChar;
+  return err;
+}
+
+TL_ERR TagLeetApp::PopulateTagList(TagLookupContext *TLCtx)
+{
+  TL_ERR err;
+  TagFile tf;
+  char *Tag;
+
+  err = tf.Init(TLCtx->TagsFilePath);
+  if (err)
+    return err;
+
+  err = PopulateTagListHelper(TLCtx, &tf);
+  /* For prefix match we don't have any fall backs */
+  if (DoPrefixMatch)
+    return err;
+
+  Tag = TLCtx->TextBuff + TLCtx->TagOffset;
+  /* If no match, perhaps file extension need to be added to selection */
+  if (!err && TList.Count == 0 && Tag[TLCtx->TagLength] == '.')
+  {
+    TLCtx->TagLength++;
+    for (; TLCtx->TagLength < TLCtx->TextLength; TLCtx->TagLength++)
+    {
+      char ch = Tag[TLCtx->TagLength];
+      if (ch >= 'A' && ch <= 'Z' || ch >= 'a' && ch <= 'z' ||
+        ch >= '0' && ch <= '9' || ch == '_')
+      {
+        continue;
+      }
+      break;
+    }
+    err = PopulateTagListHelper(TLCtx, &tf);
+    if (err)
+      return err;
+  }
+
+  return TL_ERR_OK;
+}
+
+void TagLeetApp::AutoComplete()
+{
+  TL_ERR err;
+  TlAppSync Sync(this);
+  NppCallContext NppC(this);
+  char TagsFilePath[TL_MAX_PATH];
+  TCHAR Msg[2048];
+  int i;
+
+  err = GetTagsFilePath(&NppC, TagsFilePath, sizeof(TagsFilePath));
+  if (err)
+  {
+    ::_sntprintf(Msg, ARRAY_SIZE(Msg),
+      TEXT("'tags' file not found on path of:\n%s"), NppC.Path);
+    ::MessageBox(NppHndl, Msg, TEXT("TagLEET"), MB_ICONEXCLAMATION);
+    return;
+  }
+
+  TagLookupContext TLCtx(&NppC, TagsFilePath);
+  /* Test that word is valid */
+  for (i = 0; i < TLCtx.TagLength; i++)
+  {
+    char ch = TLCtx.TextBuff[TLCtx.TagOffset + i];
+    if (ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n')
+      return;
+  }
+
+  // Above same as LookupTag()
+  // Below implements the Form() part of LookupTag()
+  err = PopulateTagList(&TLCtx);
+  if (err)
+    return;
+
+  int Idx;
+  TagList::TagListItem *Item;
+  std::string wList;
+
+  // We want prefix match, after all, this is autocomplete
+  DoPrefixMatch = true;
+  TLCtx.GetLineNumFromTag(DoPrefixMatch, &TList);
+  // Loop from SetListFromTag()
+  for (Item = TList.List, Idx=0; Item != NULL; Item = Item->Next, Idx++)
+  {
+    wList += Item->Tag;
+    wList += " ";
+  }
+
+  // Must clear the selection that TagLookupContext did for us
+  int currpos = ( int )::SendMessage( NppC.SciHndl, SCI_GETCURRENTPOS, 0, 0 );
+  SendMessage( NppC.SciHndl, SCI_SETEMPTYSELECTION, currpos, 0 );
+  SendMessage( NppC.SciHndl, SCI_AUTOCSHOW, TLCtx.TagLength, (LPARAM) wList.c_str() );
+
+  if (!err)
+    return;
+
+  switch (err)
+  {
+    case TL_ERR_SORT:
+      ::_sntprintf(Msg, ARRAY_SIZE(Msg), TEXT("Unsorted tags file: %hs"), TagsFilePath);
+      break;
+    default:
+      ::_sntprintf(Msg, ARRAY_SIZE(Msg), TEXT("unexpected error(%u)"),
+        (unsigned)err);
+      break;
+  }
+  ::MessageBox(NppHndl, Msg, TEXT("TagLEET"), MB_ICONEXCLAMATION);
 }
 
 void TagLeetApp::ShowAbout() const

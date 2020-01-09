@@ -311,6 +311,7 @@ TL_ERR TagLeetForm::CreateListView(HWND hwnd)
   err = rc == -1 && !err ? TL_ERR_GENERAL : err;
 
   ChangeColors();
+
   return err;
 }
 
