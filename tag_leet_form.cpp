@@ -21,6 +21,7 @@
 #include "scintilla.h"
 
 #include <stdlib.h>
+#include <string>
 #include <tchar.h>
 #include <commctrl.h>
 #include <malloc.h>
@@ -30,6 +31,7 @@
 using namespace TagLEET_NPP;
 
 extern bool g_useNppColors;
+extern bool g_useNppAutoC;
 
 #define SORT_UP_IMG_IDX    13
 #define SORT_DOWN_IMG_IDX  14
@@ -43,6 +45,7 @@ TagLeetForm::TagLeetForm(NppCallContext *NppC)
   LViewHWnd = NULL;
   StatusHWnd = NULL;
   DoPrefixMatch = false;
+  DoAutoComplete = false;
   ::memset(&BackLoc, 0, sizeof(BackLoc));
   BackLocBank = NppC->LocBank;
 
@@ -119,10 +122,16 @@ TL_ERR TagLeetForm::CreateWnd(TagLookupContext *TLCtx)
   App->GetFormSize(&FormWidth, &FormHeight);
   NppC->CalcFormPos(&Pt, FormWidth, FormHeight);
 
+  std::wstring title = TEXT("TagLEET for Notepad++");
+  if ( DoAutoComplete )
+      title += TEXT(": Autocomplete");
+  else
+      title += TEXT(": Lookup Tag");
+      
   FormHWnd = ::CreateWindowEx(
     WS_EX_TOOLWINDOW,
     TagLeetApp::WindowClassName,
-    TEXT("TagLEET for Notepad++"),
+    title.c_str(),
     WS_SIZEBOX | WS_SYSMENU,
     Pt.x, Pt.y, FormWidth, FormHeight,
     NppC->SciHndl,
@@ -560,6 +569,14 @@ void TagLeetForm::SetColumnSortArrow(int ColumnIdx, bool Show, bool Down)
   Header_SetItem(HdrHndl, ColumnIdx, &HdrItem);
 }
 
+std::string ws2s(const std::wstring& wstr)
+{
+    int size_needed = WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), int(wstr.length() + 1), 0, 0, 0, 0); 
+    std::string strTo(size_needed, 0);
+    WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), int(wstr.length() + 1), &strTo[0], size_needed, 0, 0); 
+    return strTo;
+}
+
 LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
   switch (uMsg)
@@ -597,7 +614,45 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
           PostCloseMsg();
           return 0;
         case NM_DBLCLK:
-          GoToSelectedTag();
+          if ( DoAutoComplete )
+          {
+            LVITEM LvItem;
+            TCHAR  tag[MAX_PATH] = {0};
+            int idx = ListView_GetNextItem( LViewHWnd, -1, LVIS_FOCUSED );
+
+            // Autocomplete
+            memset( &LvItem, 0, sizeof(LvItem) );
+            LvItem.mask       = LVIF_TEXT;
+            LvItem.iSubItem   = COLUMN_TAG;
+            LvItem.pszText    = tag;
+            LvItem.cchTextMax = MAX_PATH;
+            LvItem.iItem      = idx;
+
+            SendMessage( LViewHWnd, LVM_GETITEMTEXT, idx, (LPARAM)&LvItem );
+            std::string sTag = ws2s(tag);
+
+            SendMessage( App->getCurrScintilla(), SCI_REPLACESEL, 0, ( LPARAM) sTag.c_str() );
+
+            // Tooltip
+            memset( &LvItem, 0, sizeof(LvItem) );
+            LvItem.mask       = LVIF_TEXT;
+            LvItem.iSubItem   = COLUMN_EXCMD;
+            LvItem.pszText    = tag;
+            LvItem.cchTextMax = MAX_PATH;
+            LvItem.iItem      = idx;
+
+            SendMessage( LViewHWnd, LVM_GETITEMTEXT, idx, (LPARAM)&LvItem );
+            sTag = ws2s(tag);
+
+            int pos = ( int )::SendMessage( App->getCurrScintilla(), SCI_GETCURRENTPOS, 0, 0 );
+            SendMessage( App->getCurrScintilla(), SCI_CALLTIPSHOW, ( WPARAM )pos, ( LPARAM)sTag.c_str() );
+
+            PostCloseMsg();
+          }
+          else
+          {
+            GoToSelectedTag();
+          }
           break;
         case LVN_KEYDOWN:
         {
@@ -607,7 +662,43 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
             case VK_RETURN:
             case VK_SPACE:
             {
-              GoToSelectedTag();
+              if ( DoAutoComplete )
+              {
+                LVITEM LvItem;
+                TCHAR  tag[MAX_PATH] = {0};
+                int idx = ListView_GetNextItem( LViewHWnd, -1, LVIS_FOCUSED );
+
+                // Autocomplete
+                memset( &LvItem, 0, sizeof(LvItem) );
+                LvItem.mask       = LVIF_TEXT;
+                LvItem.iSubItem   = COLUMN_TAG;
+                LvItem.pszText    = tag;
+                LvItem.cchTextMax = MAX_PATH;
+                LvItem.iItem      = idx;
+
+                SendMessage( LViewHWnd, LVM_GETITEMTEXT, idx, (LPARAM)&LvItem );
+                std::string sTag = ws2s(tag);
+
+                SendMessage( App->getCurrScintilla(), SCI_REPLACESEL, 0, ( LPARAM) sTag.c_str() );
+
+                // Tooltip
+                memset( &LvItem, 0, sizeof(LvItem) );
+                LvItem.mask       = LVIF_TEXT;
+                LvItem.iSubItem   = COLUMN_EXCMD;
+                LvItem.pszText    = tag;
+                LvItem.cchTextMax = MAX_PATH;
+                LvItem.iItem      = idx;
+
+                SendMessage( LViewHWnd, LVM_GETITEMTEXT, idx, (LPARAM)&LvItem );
+                sTag = ws2s(tag);
+
+                int pos = ( int )::SendMessage( App->getCurrScintilla(), SCI_GETCURRENTPOS, 0, 0 );
+                SendMessage( App->getCurrScintilla(), SCI_CALLTIPSHOW, ( WPARAM )pos, ( LPARAM)sTag.c_str() );
+
+                PostCloseMsg();
+              }
+              else
+                GoToSelectedTag();
               break;
             }
             case VK_ADD:
@@ -633,13 +724,29 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
             case VK_MULTIPLY:
               if (::GetKeyState(VK_CONTROL) & 0x8000)
               {
-                SetNppColors();
-                g_useNppColors = true;
+                if ( g_useNppAutoC )
+                {
+                  g_useNppAutoC = false;
+                  UpdateStatusText(TEXT("Use TagLEET for Autocomplete"));
+                }
+                else
+                {
+                  g_useNppAutoC = true;
+                  UpdateStatusText(TEXT("Use Notepad++ for Autocomplete"));
+                }
               }
               else
               {
-                SetSysColors();
-                g_useNppColors = false;
+                if ( g_useNppColors )
+                {
+                  SetSysColors();
+                  g_useNppColors = false;
+                }
+                else
+                {
+                  SetNppColors();
+                  g_useNppColors = true;
+                }
               }
               ChangeColors();
               break;
@@ -708,6 +815,11 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
   return DefWindowProc(hwnd,uMsg, wParam, lParam);
 }
 
+void TagLeetForm::UpdateStatusText(std::wstring message)
+{
+    ::SetWindowText(StatusHWnd, message.c_str());
+}
+
 void TagLeetForm::UpdateStatusLine(int FocusIdx)
 {
   TagList::TagListItem *Item;
@@ -762,6 +874,16 @@ void TagLeetForm::SetItemText(int ColumnIdx, int SubItem, const char *Str,
   LvItem.pszText = TmpStr;
   LvItem.iSubItem = SubItem;
   ListView_SetItem(LViewHWnd, &LvItem);
+}
+
+void TagLeetForm::setDoPrefixMatch()
+{
+    DoPrefixMatch = true;
+}
+
+void TagLeetForm::setDoAutoComplete()
+{
+    DoAutoComplete = true;
 }
 
 void TagLeetForm::RefreshList(TagLookupContext *TLCtx)

@@ -22,6 +22,7 @@
 
 #include "tag_leet_app.h"
 #include <commctrl.h>
+#include <string>
 #include "tag_engine/tag_file.h"
 #include "tag_engine/tag_list.h"
 
@@ -40,6 +41,8 @@ public :
     LPARAM lParam);
   TL_ERR CreateWnd(TagLookupContext *TLCtx);
   void PostCloseMsg() const;
+  void setDoPrefixMatch();
+  void setDoAutoComplete();
 
 private:
   TL_ERR CreateListView(HWND hwnd);
@@ -56,6 +59,7 @@ private:
   LRESULT WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
   TagList::TagListItem *GetItemData(int ItemIdx);
   TL_ERR OpenTagLoc(TagList::TagListItem *Item);
+  void UpdateStatusText(std::wstring message);
   void UpdateStatusLine(int FocusIdx);
   static int CALLBACK LvSortFunc(LPARAM Item1Ptr, LPARAM Item2Ptr,
     LPARAM FormPtr);
@@ -71,6 +75,7 @@ private:
   TagList TList;
   UINT KindToIndex[TAG_KIND_LAST];
   bool DoPrefixMatch;
+  bool DoAutoComplete;
   uint8_t SortOrder[6];
   int LastMaxTagWidth;
   int LastMaxFilenameWidth;

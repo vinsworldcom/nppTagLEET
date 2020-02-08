@@ -49,8 +49,10 @@ TCHAR iniFilePath[MAX_PATH];
 const TCHAR configFileName[]  = TEXT( "TagLEET.ini" );
 const TCHAR sectionName[]     = TEXT( "Settings" );
 const TCHAR iniUseNppColors[] = TEXT( "UseNppColors" );
+const TCHAR iniUseNppAutoC[]  = TEXT( "UseNppAutoC" );
 
 bool g_useNppColors = false;
+bool g_useNppAutoC  = true;
 
 TagLeetApp::TagLeetApp(const struct NppData *NppDataObj)
 {
@@ -99,6 +101,8 @@ TagLeetApp::TagLeetApp(const struct NppData *NppDataObj)
   // get the parameter value from plugin config
   g_useNppColors = ::GetPrivateProfileInt( sectionName, iniUseNppColors, 0,
                    iniFilePath );
+  g_useNppAutoC  = ::GetPrivateProfileInt( sectionName, iniUseNppAutoC, 1,
+                   iniFilePath );
 }
 
 TagLeetApp::~TagLeetApp()
@@ -134,6 +138,8 @@ void TagLeetApp::Shutdown()
   }
   ::WritePrivateProfileString( sectionName, iniUseNppColors,
                                g_useNppColors ? TEXT( "1" ) : TEXT( "0" ), iniFilePath );
+  ::WritePrivateProfileString( sectionName, iniUseNppAutoC,
+                               g_useNppAutoC ? TEXT( "1" ) : TEXT( "0" ), iniFilePath );
 
   delete this;
 }
@@ -551,30 +557,49 @@ void TagLeetApp::AutoComplete()
       return;
   }
 
-  // Above same as LookupTag()
-  // Below implements the Form() part of LookupTag()
-  err = PopulateTagList(&TLCtx);
-  if (err)
-    return;
-
-  int Idx;
-  TagList::TagListItem *Item;
-  std::string wList;
-
-  // We want prefix match, after all, this is autocomplete
-  DoPrefixMatch = true;
-  TLCtx.GetLineNumFromTag(DoPrefixMatch, &TList);
-  // Loop from SetListFromTag()
-  for (Item = TList.List, Idx=0; Item != NULL; Item = Item->Next, Idx++)
+  if ( g_useNppAutoC )
   {
-    wList += Item->Tag;
-    wList += " ";
+    // Above same as LookupTag()
+    // Below implements the Form() part of LookupTag()
+    err = PopulateTagList(&TLCtx);
+    if (err)
+      return;
+  
+    int Idx;
+    TagList::TagListItem *Item;
+    std::string wList;
+  
+    // We want prefix match, after all, this is autocomplete
+    DoPrefixMatch = true;
+    TLCtx.GetLineNumFromTag(DoPrefixMatch, &TList);
+    // Loop from SetListFromTag()
+    for (Item = TList.List, Idx=0; Item != NULL; Item = Item->Next, Idx++)
+    {
+      wList += Item->Tag;
+      wList += " ";
+    }
+  
+    // Must clear the selection that TagLookupContext did for us
+    int currpos = ( int )::SendMessage( NppC.SciHndl, SCI_GETCURRENTPOS, 0, 0 );
+    SendMessage( NppC.SciHndl, SCI_SETEMPTYSELECTION, currpos, 0 );
+    SendMessage( NppC.SciHndl, SCI_AUTOCSHOW, TLCtx.TagLength, (LPARAM) wList.c_str() );
   }
+  else
+  {
+    if (Form != NULL)
+    {
+      Form->RefreshList(&TLCtx);
+      return;
+    }
+  
+    Form = new TagLeetForm(&NppC);
+    if (Form == NULL)
+      return;
 
-  // Must clear the selection that TagLookupContext did for us
-  int currpos = ( int )::SendMessage( NppC.SciHndl, SCI_GETCURRENTPOS, 0, 0 );
-  SendMessage( NppC.SciHndl, SCI_SETEMPTYSELECTION, currpos, 0 );
-  SendMessage( NppC.SciHndl, SCI_AUTOCSHOW, TLCtx.TagLength, (LPARAM) wList.c_str() );
+    Form->setDoPrefixMatch();
+    Form->setDoAutoComplete();
+    err = Form->CreateWnd(&TLCtx);
+  }
 
   if (!err)
     return;
