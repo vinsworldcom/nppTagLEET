@@ -22,6 +22,7 @@
 
 #include "tag_leet_app.h"
 #include <commctrl.h>
+#include <string>
 #include "tag_engine/tag_file.h"
 #include "tag_engine/tag_list.h"
 
@@ -40,6 +41,8 @@ public :
     LPARAM lParam);
   TL_ERR CreateWnd(TagLookupContext *TLCtx);
   void PostCloseMsg() const;
+  void setDoPrefixMatch();
+  void setDoAutoComplete();
 
 private:
   TL_ERR CreateListView(HWND hwnd);
@@ -48,31 +51,41 @@ private:
     void (*ModifyStr)(const char **Str, int *StrSize) = NULL);
   TL_ERR SetListFromTag(TagLookupContext *TLCtx);
   void UpdateColumnWidths(int MaxTagWidth, int MaxFilenameWidth,
-    int MaxExCmdWidth, int MaxExtFieldsWidth);
+    int MaxExCmdWidth, int MaxExtTypeWidth,
+    int MaxExtLineWidth, int MaxExtFieldsWidth);
   TL_ERR PopulateTagListHelper(TagLookupContext *TLCtx, TagFile *tf);
   TL_ERR PopulateTagList(TagLookupContext *TLCtx);
   void GoToSelectedTag();
   LRESULT WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
   TagList::TagListItem *GetItemData(int ItemIdx);
   TL_ERR OpenTagLoc(TagList::TagListItem *Item);
+  void UpdateStatusText(std::wstring message);
   void UpdateStatusLine(int FocusIdx);
   static int CALLBACK LvSortFunc(LPARAM Item1Ptr, LPARAM Item2Ptr,
     LPARAM FormPtr);
   void SetColumnSortArrow(int ColumnIdx, bool Show, bool Down=false);
   void ResizeForm(int change);
   void ResizeListViewFont(int change, bool reset);
+  void SetNppColors();
+  void SetSysColors();
+  void ChangeColors();
   void OnResize();
 
   TagLeetApp *App;
   TagList TList;
   UINT KindToIndex[TAG_KIND_LAST];
   bool DoPrefixMatch;
-  uint8_t SortOrder[4];
+  bool DoAutoComplete;
+  uint8_t SortOrder[6];
   int LastMaxTagWidth;
   int LastMaxFilenameWidth;
   int LastMaxExCmdWidth;
+  int LastMaxExtTypeWidth;
+  int LastMaxExtLineWidth;
   int LastMaxExtFieldsWidth;
   bool NeedUpdateColumns;
+  COLORREF colorFg;
+  COLORREF colorBg;
 
   /* Location in NPP file during tag open. If we end up 'going' to a tag's
    * location this location will be pushed into the 'Back' queue */
@@ -88,6 +101,8 @@ enum {
   COLUMN_TAG = 0,
   COLUMN_FILENAME,
   COLUMN_EXCMD,
+  COLUMN_EXTTYPE,
+  COLUMN_EXTLINE,
   COLUMN_EXTFIELDS
 };
 

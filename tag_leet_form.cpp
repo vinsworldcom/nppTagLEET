@@ -18,7 +18,10 @@
 */
 
 #include "tag_leet_form.h"
+#include "scintilla.h"
 
+#include <stdlib.h>
+#include <string>
 #include <tchar.h>
 #include <commctrl.h>
 #include <malloc.h>
@@ -26,6 +29,9 @@
 #include "resource.h"
 
 using namespace TagLEET_NPP;
+
+extern bool g_useNppColors;
+extern bool g_useNppAutoC;
 
 #define SORT_UP_IMG_IDX    13
 #define SORT_DOWN_IMG_IDX  14
@@ -39,6 +45,7 @@ TagLeetForm::TagLeetForm(NppCallContext *NppC)
   LViewHWnd = NULL;
   StatusHWnd = NULL;
   DoPrefixMatch = false;
+  DoAutoComplete = false;
   ::memset(&BackLoc, 0, sizeof(BackLoc));
   BackLocBank = NppC->LocBank;
 
@@ -46,6 +53,11 @@ TagLeetForm::TagLeetForm(NppCallContext *NppC)
   LastMaxFilenameWidth = 0;
   LastMaxExCmdWidth = 0;
   NeedUpdateColumns = false;
+
+  if ( g_useNppColors )
+      SetNppColors();
+  else
+      SetSysColors();
 
   ::memset(KindToIndex, 0, sizeof(KindToIndex));
   KindToIndex[TAG_KIND_UNKNOWN] = (UINT)-1;
@@ -110,10 +122,16 @@ TL_ERR TagLeetForm::CreateWnd(TagLookupContext *TLCtx)
   App->GetFormSize(&FormWidth, &FormHeight);
   NppC->CalcFormPos(&Pt, FormWidth, FormHeight);
 
+  std::wstring title = TEXT("TagLEET for Notepad++");
+  if ( DoAutoComplete )
+      title += TEXT(": Autocomplete");
+  else
+      title += TEXT(": Lookup Tag");
+      
   FormHWnd = ::CreateWindowEx(
     WS_EX_TOOLWINDOW,
     TagLeetApp::WindowClassName,
-    TEXT("TagLEET for Notepad++"),
+    title.c_str(),
     WS_SIZEBOX | WS_SYSMENU,
     Pt.x, Pt.y, FormWidth, FormHeight,
     NppC->SciHndl,
@@ -124,7 +142,7 @@ TL_ERR TagLeetForm::CreateWnd(TagLookupContext *TLCtx)
   if (FormHWnd == NULL || LViewHWnd == NULL)
     return TL_ERR_GENERAL;
 
-  UpdateColumnWidths(0, 0, 0, 0);
+  UpdateColumnWidths(0, 0, 0, 0, 0, 0);
   err = SetListFromTag(TLCtx);
   if (err)
   {
@@ -197,6 +215,31 @@ void TagLeetForm::ResizeListViewFont(int change, bool reset)
       RDW_ERASE  | RDW_INVALIDATE | RDW_ALLCHILDREN);
 }
 
+void TagLeetForm::SetNppColors()
+{
+  colorFg = ( COLORREF )::SendMessage( App->getCurrScintilla(), SCI_STYLEGETFORE, 0, 0 );
+  colorBg = ( COLORREF )::SendMessage( App->getCurrScintilla(), SCI_STYLEGETBACK, 0, 0 );
+}
+
+void TagLeetForm::SetSysColors()
+{
+  colorFg = GetSysColor(COLOR_INFOTEXT);
+  colorBg = GetSysColor(COLOR_INFOBK);
+}
+
+void TagLeetForm::ChangeColors()
+{
+  ::SendMessage(LViewHWnd, WM_SETREDRAW, FALSE, 0);
+
+  ListView_SetBkColor(LViewHWnd, colorBg );
+  ListView_SetTextBkColor(LViewHWnd, colorBg);
+  ListView_SetTextColor(LViewHWnd, colorFg);
+
+  ::SendMessage(LViewHWnd, WM_SETREDRAW, TRUE, 0);
+  ::RedrawWindow(LViewHWnd, NULL, NULL,
+    RDW_ERASE  | RDW_INVALIDATE | RDW_ALLCHILDREN);
+}
+
 /* Called from WM_CREATE message of Form window. Note that at this point
  * CreateWindow of the Form Window has not returned yet so FormHWnd is NULL */
 TL_ERR TagLeetForm::CreateListView(HWND hwnd)
@@ -257,17 +300,27 @@ TL_ERR TagLeetForm::CreateListView(HWND hwnd)
   err = rc == -1 && !err ? TL_ERR_GENERAL : err;
 
   LvCol.iSubItem = COLUMN_EXCMD;
-  LvCol.pszText = const_cast<LPTSTR>(_T("Line"));
+  LvCol.pszText = const_cast<LPTSTR>(_T("Text"));
   rc = ListView_InsertColumn(LViewHWnd, 2, &LvCol);
+  err = rc == -1 && !err ? TL_ERR_GENERAL : err;
+
+  LvCol.iSubItem = COLUMN_EXTTYPE;
+  LvCol.pszText = const_cast<LPTSTR>(_T("Type"));
+  rc = ListView_InsertColumn(LViewHWnd, 3, &LvCol);
+  err = rc == -1 && !err ? TL_ERR_GENERAL : err;
+
+  LvCol.iSubItem = COLUMN_EXTLINE;
+  LvCol.pszText = const_cast<LPTSTR>(_T("Line"));
+  rc = ListView_InsertColumn(LViewHWnd, 4, &LvCol);
   err = rc == -1 && !err ? TL_ERR_GENERAL : err;
 
   LvCol.iSubItem = COLUMN_EXTFIELDS;
   LvCol.pszText = const_cast<LPTSTR>(_T("Extra"));
-  rc = ListView_InsertColumn(LViewHWnd, 3, &LvCol);
+  rc = ListView_InsertColumn(LViewHWnd, 5, &LvCol);
   err = rc == -1 && !err ? TL_ERR_GENERAL : err;
 
-  ListView_SetBkColor(LViewHWnd, GetSysColor(COLOR_INFOBK));
-  ListView_SetTextBkColor(LViewHWnd, GetSysColor(COLOR_INFOBK));
+  ChangeColors();
+
   return err;
 }
 
@@ -294,6 +347,24 @@ void TagLeetForm::PostCloseMsg() const
 {
   if (FormHWnd != NULL)
     ::PostMessage(FormHWnd, WM_CLOSE, 0, 0);
+}
+
+static void CleanExtType(const char **StrPtr, int *StrSizePtr)
+{
+  const char *Str = *StrPtr;
+  int StrSize = *StrSizePtr;
+// TODO:2019-04-06:MVINCENT: parse out what we want, e.g., remove "line:"
+  *StrPtr = Str;
+  *StrSizePtr = StrSize;
+}
+
+static void CleanExtLine(const char **StrPtr, int *StrSizePtr)
+{
+  const char *Str = *StrPtr;
+  int StrSize = *StrSizePtr;
+// TODO:2019-04-06:MVINCENT: parse out what we want, e.g., remove "line:"
+  *StrPtr = Str;
+  *StrSizePtr = StrSize;
 }
 
 static void CleanExtFields(const char **StrPtr, int *StrSizePtr)
@@ -362,6 +433,20 @@ static int comp_str(const char *str1, int length1,
   return comp_val;
 }
 
+static int comp_num(const char *str1, const char *str2)
+{
+  int comp_val = 0;
+  int num1 = atoi( str1 );
+  int num2 = atoi( str2 );
+
+  if ( num1 < num2 )
+      comp_val = -1;
+  else if ( num1 > num2 )
+      comp_val = 1;
+
+  return comp_val;
+}
+
 /* First compare file names, if identical compare full path. */
 static int comp_file_paths(const char *path1, int path_length1,
   const char *path2, int path_length2, bool case_insensitive)
@@ -425,7 +510,19 @@ int CALLBACK TagLeetForm::LvSortFunc(LPARAM Item1Ptr, LPARAM Item2Ptr,
         CompVal = comp_str(str1, length1, str2, length2,
           Form->TList.TagsCaseInsensitive);
         break;
-// TODO:2019-04-06:MVINCENT: if extras is only line number, need numeric sort here
+      case COLUMN_EXTTYPE:
+        str1 = Item1->ExtType;
+        length1 = (int)::strlen(str1);
+        str2 = Item2->ExtType;
+        length2 = (int)::strlen(str2);
+        CompVal = comp_str(str1, length1, str2, length2,
+          Form->TList.TagsCaseInsensitive);
+        break;
+      case COLUMN_EXTLINE:
+        str1 = Item1->ExtLine;
+        str2 = Item2->ExtLine;
+        CompVal = comp_num(str1, str2);
+        break;
       case COLUMN_EXTFIELDS:
         str1 = Item1->ExtFields;
         length1 = (int)::strlen(str1);
@@ -472,6 +569,14 @@ void TagLeetForm::SetColumnSortArrow(int ColumnIdx, bool Show, bool Down)
   Header_SetItem(HdrHndl, ColumnIdx, &HdrItem);
 }
 
+std::string ws2s(const std::wstring& wstr)
+{
+    int size_needed = WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), int(wstr.length() + 1), 0, 0, 0, 0); 
+    std::string strTo(size_needed, 0);
+    WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), int(wstr.length() + 1), &strTo[0], size_needed, 0, 0); 
+    return strTo;
+}
+
 LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
   switch (uMsg)
@@ -494,8 +599,8 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
     case WM_PAINT:
       if (NeedUpdateColumns)
       {
-        UpdateColumnWidths(LastMaxTagWidth, LastMaxFilenameWidth,
-          LastMaxExCmdWidth, LastMaxExtFieldsWidth);
+        UpdateColumnWidths(LastMaxTagWidth, LastMaxFilenameWidth, LastMaxExCmdWidth, 
+                           LastMaxExtTypeWidth, LastMaxExtLineWidth, LastMaxExtFieldsWidth);
         NeedUpdateColumns = false;
       }
       break;
@@ -509,7 +614,45 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
           PostCloseMsg();
           return 0;
         case NM_DBLCLK:
-          GoToSelectedTag();
+          if ( DoAutoComplete )
+          {
+            LVITEM LvItem;
+            TCHAR  tag[MAX_PATH] = {0};
+            int idx = ListView_GetNextItem( LViewHWnd, -1, LVIS_FOCUSED );
+
+            // Autocomplete
+            memset( &LvItem, 0, sizeof(LvItem) );
+            LvItem.mask       = LVIF_TEXT;
+            LvItem.iSubItem   = COLUMN_TAG;
+            LvItem.pszText    = tag;
+            LvItem.cchTextMax = MAX_PATH;
+            LvItem.iItem      = idx;
+
+            SendMessage( LViewHWnd, LVM_GETITEMTEXT, idx, (LPARAM)&LvItem );
+            std::string sTag = ws2s(tag);
+
+            SendMessage( App->getCurrScintilla(), SCI_REPLACESEL, 0, ( LPARAM) sTag.c_str() );
+
+            // Tooltip
+            memset( &LvItem, 0, sizeof(LvItem) );
+            LvItem.mask       = LVIF_TEXT;
+            LvItem.iSubItem   = COLUMN_EXCMD;
+            LvItem.pszText    = tag;
+            LvItem.cchTextMax = MAX_PATH;
+            LvItem.iItem      = idx;
+
+            SendMessage( LViewHWnd, LVM_GETITEMTEXT, idx, (LPARAM)&LvItem );
+            sTag = ws2s(tag);
+
+            int pos = ( int )::SendMessage( App->getCurrScintilla(), SCI_GETCURRENTPOS, 0, 0 );
+            SendMessage( App->getCurrScintilla(), SCI_CALLTIPSHOW, ( WPARAM )pos, ( LPARAM)sTag.c_str() );
+
+            PostCloseMsg();
+          }
+          else
+          {
+            GoToSelectedTag();
+          }
           break;
         case LVN_KEYDOWN:
         {
@@ -519,7 +662,43 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
             case VK_RETURN:
             case VK_SPACE:
             {
-              GoToSelectedTag();
+              if ( DoAutoComplete )
+              {
+                LVITEM LvItem;
+                TCHAR  tag[MAX_PATH] = {0};
+                int idx = ListView_GetNextItem( LViewHWnd, -1, LVIS_FOCUSED );
+
+                // Autocomplete
+                memset( &LvItem, 0, sizeof(LvItem) );
+                LvItem.mask       = LVIF_TEXT;
+                LvItem.iSubItem   = COLUMN_TAG;
+                LvItem.pszText    = tag;
+                LvItem.cchTextMax = MAX_PATH;
+                LvItem.iItem      = idx;
+
+                SendMessage( LViewHWnd, LVM_GETITEMTEXT, idx, (LPARAM)&LvItem );
+                std::string sTag = ws2s(tag);
+
+                SendMessage( App->getCurrScintilla(), SCI_REPLACESEL, 0, ( LPARAM) sTag.c_str() );
+
+                // Tooltip
+                memset( &LvItem, 0, sizeof(LvItem) );
+                LvItem.mask       = LVIF_TEXT;
+                LvItem.iSubItem   = COLUMN_EXCMD;
+                LvItem.pszText    = tag;
+                LvItem.cchTextMax = MAX_PATH;
+                LvItem.iItem      = idx;
+
+                SendMessage( LViewHWnd, LVM_GETITEMTEXT, idx, (LPARAM)&LvItem );
+                sTag = ws2s(tag);
+
+                int pos = ( int )::SendMessage( App->getCurrScintilla(), SCI_GETCURRENTPOS, 0, 0 );
+                SendMessage( App->getCurrScintilla(), SCI_CALLTIPSHOW, ( WPARAM )pos, ( LPARAM)sTag.c_str() );
+
+                PostCloseMsg();
+              }
+              else
+                GoToSelectedTag();
               break;
             }
             case VK_ADD:
@@ -541,6 +720,35 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
               {
                 ResizeForm(-10);
               }
+              break;
+            case VK_MULTIPLY:
+              if (::GetKeyState(VK_CONTROL) & 0x8000)
+              {
+                if ( g_useNppAutoC )
+                {
+                  g_useNppAutoC = false;
+                  UpdateStatusText(TEXT("Use TagLEET for Autocomplete"));
+                }
+                else
+                {
+                  g_useNppAutoC = true;
+                  UpdateStatusText(TEXT("Use Notepad++ for Autocomplete"));
+                }
+              }
+              else
+              {
+                if ( g_useNppColors )
+                {
+                  SetSysColors();
+                  g_useNppColors = false;
+                }
+                else
+                {
+                  SetNppColors();
+                  g_useNppColors = true;
+                }
+              }
+              ChangeColors();
               break;
             case VK_DIVIDE:
               if (::GetKeyState(VK_CONTROL) & 0x8000)
@@ -607,6 +815,11 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
   return DefWindowProc(hwnd,uMsg, wParam, lParam);
 }
 
+void TagLeetForm::UpdateStatusText(std::wstring message)
+{
+    ::SetWindowText(StatusHWnd, message.c_str());
+}
+
 void TagLeetForm::UpdateStatusLine(int FocusIdx)
 {
   TagList::TagListItem *Item;
@@ -661,6 +874,16 @@ void TagLeetForm::SetItemText(int ColumnIdx, int SubItem, const char *Str,
   LvItem.pszText = TmpStr;
   LvItem.iSubItem = SubItem;
   ListView_SetItem(LViewHWnd, &LvItem);
+}
+
+void TagLeetForm::setDoPrefixMatch()
+{
+    DoPrefixMatch = true;
+}
+
+void TagLeetForm::setDoAutoComplete()
+{
+    DoAutoComplete = true;
 }
 
 void TagLeetForm::RefreshList(TagLookupContext *TLCtx)
@@ -729,21 +952,26 @@ TL_ERR TagLeetForm::PopulateTagList(TagLookupContext *TLCtx)
 }
 
 void TagLeetForm::UpdateColumnWidths(int MaxTagWidth, int MaxFilenameWidth,
-  int MaxExCmdWidth, int MaxExtFieldsWidth)
+    int MaxExCmdWidth, int MaxExtTypeWidth, 
+    int MaxExtLineWidth, int MaxExtFieldsWidth)
 {
   RECT Rect;
   int TotalWidth, MaxWidth;
-  int TagWidth, FilenameWidth, ExCmdWidth, ExtFieldsWidth, ItemsHight;
+  int TagWidth, FilenameWidth, ExCmdWidth, ExtTypeWidth, ExtLineWidth, ExtFieldsWidth, ItemsHight;
   DWORD ApproxRect;
 
   LastMaxTagWidth = MaxTagWidth;
   LastMaxFilenameWidth = MaxFilenameWidth;
   LastMaxExCmdWidth = MaxExCmdWidth;
+  LastMaxExtTypeWidth = MaxExtTypeWidth;
+  LastMaxExtLineWidth = MaxExtLineWidth;
   LastMaxExtFieldsWidth = MaxExtFieldsWidth;
 
   MaxTagWidth += 28;
   MaxFilenameWidth += 12;
   MaxExCmdWidth += 12;
+  MaxExtTypeWidth += 12;
+  MaxExtLineWidth += 12;
   MaxExtFieldsWidth += 12;
 
   ::ShowScrollBar(LViewHWnd, SB_BOTH, FALSE);
@@ -758,41 +986,50 @@ void TagLeetForm::UpdateColumnWidths(int MaxTagWidth, int MaxFilenameWidth,
     ::GetClientRect(LViewHWnd, &Rect);
   }
   MaxWidth = Rect.right;
-  TotalWidth = MaxTagWidth + MaxFilenameWidth + MaxExCmdWidth + MaxExtFieldsWidth;
+  TotalWidth = MaxTagWidth + MaxFilenameWidth + MaxExCmdWidth + 
+               MaxExtTypeWidth + MaxExtLineWidth + MaxExtFieldsWidth;
   if (TotalWidth < MaxWidth)
   {
     /* Try default 40%-30%-30% */
-    TagWidth = MaxWidth * 35 / 100;
+    TagWidth = MaxWidth * 15 / 100;
     FilenameWidth = MaxWidth * 20 / 100;
-    ExCmdWidth = MaxWidth * 20 / 100;
-    ExtFieldsWidth = MaxWidth - TagWidth - FilenameWidth - ExCmdWidth;
+    ExCmdWidth = MaxWidth * 40 / 100;
+    ExtTypeWidth = MaxWidth * 5 / 100;
+    ExtLineWidth = MaxWidth * 5 / 100;
+    ExtFieldsWidth = MaxWidth - TagWidth - FilenameWidth - ExCmdWidth - ExtTypeWidth - ExtLineWidth;
     /* If no fit then just expand each 'max' */
     if (MaxTagWidth > TagWidth || MaxFilenameWidth > FilenameWidth ||
-      MaxExCmdWidth > ExCmdWidth || MaxExtFieldsWidth > ExtFieldsWidth)
+      MaxExCmdWidth > ExCmdWidth || MaxExtTypeWidth > ExtTypeWidth ||
+      MaxExtLineWidth > ExtLineWidth || MaxExtFieldsWidth > ExtFieldsWidth)
     {
-      int Extra = (MaxWidth - TotalWidth)/4;
+      int Extra = (MaxWidth - TotalWidth)/6;
       TagWidth = MaxTagWidth + Extra;
       FilenameWidth = MaxFilenameWidth + Extra;
       ExCmdWidth = MaxExCmdWidth + Extra;
+      ExtTypeWidth = MaxExtTypeWidth + Extra;
+      ExtLineWidth = MaxExtLineWidth + Extra;
+      ExtFieldsWidth = MaxExtFieldsWidth + Extra;
     }
   }
   else
   {
     int Remaining = MaxWidth;
     /* Give tag up to 55% */
-    TagWidth = MaxTagWidth * 100 <= Remaining * 55 ? MaxTagWidth :
-      Remaining * 55 / 100;
+    TagWidth = MaxTagWidth * 100 <= Remaining * 35 ? MaxTagWidth :
+      Remaining * 35 / 100;
     Remaining -= TagWidth;
     /* Give filename up to 80% of the remaining width */
     FilenameWidth = MaxFilenameWidth * 100 <= Remaining * 80 ? MaxFilenameWidth :
       Remaining * 80 / 100;
   }
 
-  ExtFieldsWidth = MaxWidth - TagWidth - FilenameWidth - ExCmdWidth;
+  ExtFieldsWidth = MaxWidth - TagWidth - FilenameWidth - ExCmdWidth - ExtTypeWidth - ExtLineWidth;
   ListView_SetColumnWidth(LViewHWnd, 0, TagWidth);
   ListView_SetColumnWidth(LViewHWnd, 1, FilenameWidth);
   ListView_SetColumnWidth(LViewHWnd, 2, ExCmdWidth);
-  ListView_SetColumnWidth(LViewHWnd, 3, ExtFieldsWidth);
+  ListView_SetColumnWidth(LViewHWnd, 3, ExtTypeWidth);
+  ListView_SetColumnWidth(LViewHWnd, 4, ExtLineWidth);
+  ListView_SetColumnWidth(LViewHWnd, 5, ExtFieldsWidth);
 }
 
 TL_ERR TagLeetForm::SetListFromTag(TagLookupContext *TLCtx)
@@ -803,6 +1040,8 @@ TL_ERR TagLeetForm::SetListFromTag(TagLookupContext *TLCtx)
   int MaxTagWidth = 0;
   int MaxFilenameWidth = 0;
   int MaxExCmdWidth = 0;
+  int MaxExtTypeWidth = 0;
+  int MaxExtLineWidth = 0;
   int MaxExtFieldsWidth = 0;
 
   /* If there is currently an item with focus, save its location so we could
@@ -834,12 +1073,14 @@ TL_ERR TagLeetForm::SetListFromTag(TagLookupContext *TLCtx)
     SetItemText(LvIdx, COLUMN_TAG, Item->Tag, &MaxTagWidth);
     SetItemText(LvIdx, COLUMN_FILENAME, Item->FileName, &MaxFilenameWidth, ::FileFromPath);
     SetItemText(LvIdx, COLUMN_EXCMD, Item->ExCmd, &MaxExCmdWidth, ::CleanExCmd);
+    SetItemText(LvIdx, COLUMN_EXTTYPE, Item->ExtType, &MaxExtTypeWidth, ::CleanExtType);
+    SetItemText(LvIdx, COLUMN_EXTLINE, Item->ExtLine, &MaxExtLineWidth, ::CleanExtLine);
     SetItemText(LvIdx, COLUMN_EXTFIELDS, Item->ExtFields, &MaxExtFieldsWidth, ::CleanExtFields);
   }
 
   if (Idx > 0)
   {
-    UpdateColumnWidths(MaxTagWidth, MaxFilenameWidth, MaxExCmdWidth, MaxExtFieldsWidth);
+    UpdateColumnWidths(MaxTagWidth, MaxFilenameWidth, MaxExCmdWidth, MaxExtTypeWidth, MaxExtLineWidth, MaxExtFieldsWidth);
     UINT state = LVIS_FOCUSED | LVIS_SELECTED;
     if (FocusIdx == -1)
       FocusIdx = ListView_GetNextItem(LViewHWnd, -1, LVNI_ALL);

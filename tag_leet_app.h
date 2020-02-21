@@ -76,6 +76,27 @@ private:
   NppLocStack Forward;
 };
 
+// Need to move this earlier as TagLeetApp needs this class for 2 ported functions:
+// PopulateTagList(), PopulateTagListHelper()
+class TagLookupContext
+{
+public:
+  TagLookupContext(NppCallContext *in_NppC, const char *in_TagsFilePath);
+  ~TagLookupContext() {};
+  void GetLineNumFromTag(bool PrefixMatch, TagList *tl) const;
+
+  NppCallContext *NppC;
+  const char *TagsFilePath;
+  char TextBuff[512];
+  int TextLength;
+  int TagOffset;
+  int TagLength;
+  int LineNum;
+  int LineStartPos;
+  int LineEndPos;
+  int TextStartPos;
+};
+
 class TagLeetApp
 {
 public:
@@ -87,12 +108,14 @@ public:
   void LookupTag();
   void GoBack();
   void GoForward();
+  void AutoComplete();
   void Lock();
   void Unlock();
   TL_ERR GoToFileLine(const NppLoc *Loc, const char *Tag = NULL);
   HINSTANCE GetInstance() const { return InstanceHndl; }
   void DetachForm(TagLeetForm *Form, bool *DestroyApp);
   void ShowAbout() const;
+  HWND getCurrScintilla();
   HFONT GetStatusFont() const { return StatusFont; }
   HFONT GetListViewFont() const { return ListViewFont; }
   int GetStatusHeight() const { return StatusHeight; }
@@ -114,10 +137,16 @@ private:
     const char *Tag);
   int GetScreenHeight();
 
+  TL_ERR PopulateTagListHelper(TagLookupContext *TLCtx, TagFile *tf);
+  TL_ERR PopulateTagList(TagLookupContext *TLCtx);
+
   HFONT CreateSpecificFont(const TCHAR **FontList, int FontListSize,
     int Height);
   HFONT CreateStatusFont();
   HFONT CreateListViewFont();
+
+  TagList TList;
+  bool DoPrefixMatch;
 
   static HINSTANCE InstanceHndl;
   CRITICAL_SECTION CritSec;
@@ -164,25 +193,6 @@ public:
   NppLocBank *LocBank;
   NppLoc Loc;
   TCHAR Path[TL_MAX_PATH];
-};
-
-class TagLookupContext
-{
-public:
-  TagLookupContext(NppCallContext *in_NppC, const char *in_TagsFilePath);
-  ~TagLookupContext() {};
-  void GetLineNumFromTag(bool PrefixMatch, TagList *tl) const;
-
-  NppCallContext *NppC;
-  const char *TagsFilePath;
-  char TextBuff[512];
-  int TextLength;
-  int TagOffset;
-  int TagLength;
-  int LineNum;
-  int LineStartPos;
-  int LineEndPos;
-  int TextStartPos;
 };
 
 class NppFileLineIterator : public LineIterator

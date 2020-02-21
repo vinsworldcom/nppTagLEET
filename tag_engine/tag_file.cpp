@@ -770,7 +770,50 @@ TL_ERR TagIterator::GetNextTagLine(const char **Line, uint32_t *LineSize)
   }
 }
 
-static TagKind get_tag_kind(const char *ExtStr, uint32_t ExtStrSize)
+void find_line_num(const char *ExtStr, uint32_t ExtStrSize, TagLineProperties *Props)
+{
+  uint32_t start, i;
+
+  start = i = 0;
+  for(;;)
+  {
+    if (i < ExtStrSize && ExtStr[i] != '\t')
+    {
+      i++;
+      continue;
+    }
+
+    if (i - start >= 6 && ::memcmp(ExtStr + start, "line:", 5) == 0)
+    {
+      Props->ExtLine = ExtStr + start + 5;
+      Props->ExtLineSize = i - 5;
+
+      Props->ExtFieldsSize -= i;
+      if ( Props->ExtFieldsSize <= 0 )
+      {
+          Props->ExtFields = "";
+          Props->ExtFieldsSize = 0;
+      }
+      else
+          Props->ExtFields = ExtStr + start + i;
+
+      break;
+    }
+    else if (i == ExtStrSize)
+    {
+      break;
+    }
+    else
+    {
+      start = i + 1;
+      i = start;
+      continue;
+    }
+  }
+  return;    
+}
+
+static TagKind get_tag_kind(const char *ExtStr, uint32_t ExtStrSize, TagLineProperties *Props)
 {
   uint32_t start, i;
   char kind_char;
@@ -787,10 +830,26 @@ static TagKind get_tag_kind(const char *ExtStr, uint32_t ExtStrSize)
     if (i - start == 1)
     {
       kind_char = ExtStr[start];
+      Props->ExtFieldsSize -= 1;
+      if ( Props->ExtFieldsSize <= 0 )
+      {
+          Props->ExtFields = "";
+          Props->ExtFieldsSize = 0;
+      }
+      else
+          Props->ExtFields = ExtStr + start + 1;
     }
     else if (i - start == 6 && ::memcmp(ExtStr + start, "kind:", 5) == 0)
     {
       kind_char = ExtStr[start+5];
+      Props->ExtFieldsSize -= 6;
+      if ( Props->ExtFieldsSize <= 0 )
+      {
+          Props->ExtFields = "";
+          Props->ExtFieldsSize = 0;
+      }
+      else
+          Props->ExtFields = ExtStr + start + 6;
     }
     else if (i == ExtStrSize)
     {
@@ -805,21 +864,21 @@ static TagKind get_tag_kind(const char *ExtStr, uint32_t ExtStrSize)
 
     switch (kind_char)
     {
-      case 'F': return TAG_KIND_FILE;
-      case 'c': return TAG_KIND_CLASSES;
-      case 'd': return TAG_KIND_MACRO_DEF;
-      case 'e': return TAG_KIND_ENUM_VAL;
-      case 'f': return TAG_KIND_FUNCTION_DEF;
-      case 'g': return TAG_KIND_ENUM_NAME;
-      case 'l': return TAG_KIND_LOCAL_VAR;
-      case 'm': return TAG_KIND_MEMBER;
-      case 'n': return TAG_KIND_NAMESPACE;
-      case 'p': return TAG_KIND_FUNCTION_PROTO;
-      case 's': return TAG_KIND_STRUCT_NAME;
-      case 't': return TAG_KIND_TYPEDEF;
-      case 'u': return TAG_KIND_UNION_NAME;
-      case 'v': return TAG_KIND_VAR_DEF;
-      case 'x': return TAG_KIND_EXTERNAL;
+      case 'F': Props->ExtType = "F"; return TAG_KIND_FILE;
+      case 'c': Props->ExtType = "c"; return TAG_KIND_CLASSES;
+      case 'd': Props->ExtType = "d"; return TAG_KIND_MACRO_DEF;
+      case 'e': Props->ExtType = "e"; return TAG_KIND_ENUM_VAL;
+      case 'f': Props->ExtType = "f"; return TAG_KIND_FUNCTION_DEF;
+      case 'g': Props->ExtType = "g"; return TAG_KIND_ENUM_NAME;
+      case 'l': Props->ExtType = "l"; return TAG_KIND_LOCAL_VAR;
+      case 'm': Props->ExtType = "m"; return TAG_KIND_MEMBER;
+      case 'n': Props->ExtType = "n"; return TAG_KIND_NAMESPACE;
+      case 'p': Props->ExtType = "p"; return TAG_KIND_FUNCTION_PROTO;
+      case 's': Props->ExtType = "s"; return TAG_KIND_STRUCT_NAME;
+      case 't': Props->ExtType = "t"; return TAG_KIND_TYPEDEF;
+      case 'u': Props->ExtType = "u"; return TAG_KIND_UNION_NAME;
+      case 'v': Props->ExtType = "v"; return TAG_KIND_VAR_DEF;
+      case 'x': Props->ExtType = "x"; return TAG_KIND_EXTERNAL;
       default:
         return TAG_KIND_UNKNOWN;
     }
@@ -883,6 +942,16 @@ TL_ERR TagIterator::GetTagLineProps(TagLineProperties *Props) const
     Props->ExtFieldsSize = 0;
   }
 
-  Props->Kind = get_tag_kind(Props->ExtFields, Props->ExtFieldsSize);
+  // These are be parsed in the following function calls
+  Props->ExtType = " ";
+  Props->ExtTypeSize = 1;
+  Props->ExtLine = " ";
+  Props->ExtLineSize = 1;
+
+  Props->Kind = get_tag_kind(Props->ExtFields, Props->ExtFieldsSize, Props);
+
+  if ( Props->ExtFieldsSize > 0 )
+    find_line_num(Props->ExtFields, Props->ExtFieldsSize, Props);
+
   return TL_ERR_OK;
 }

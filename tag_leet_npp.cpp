@@ -36,6 +36,7 @@ HINSTANCE TagLeetApp::InstanceHndl = NULL;
 static void NppLookupTag();
 static void NppGoBack();
 static void NppGoForward();
+static void NppAutoComplete();
 static void TagLeetAbout();
 
 BOOL APIENTRY DllMain( HINSTANCE hModule, DWORD Reason, LPVOID lpReserved)
@@ -86,10 +87,11 @@ extern "C" __declspec(dllexport) FuncItem * getFuncsArray(int *nbF)
     {false, true, false, VK_LEFT},
     {false, true, false, VK_RIGHT}};
   static struct FuncItem TagLeetFuncs[] = {
-    {_T("Lookup Tag"), NppLookupTag, 0, false, TagLeetShortcuts},
-    {_T("Back"),       NppGoBack,    0, false, TagLeetShortcuts + 1},
-    {_T("Forward"),    NppGoForward, 0, false, TagLeetShortcuts + 2},
-    {_T("About"),      TagLeetAbout, 0, false, NULL}};
+    {_T("Lookup Tag"),   NppLookupTag,    0, false, TagLeetShortcuts},
+    {_T("Back"),         NppGoBack,       0, false, TagLeetShortcuts + 1},
+    {_T("Forward"),      NppGoForward,    0, false, TagLeetShortcuts + 2},
+    {_T("Autocomplete"), NppAutoComplete, 0, false, NULL},
+    {_T("About"),        TagLeetAbout,    0, false, NULL}};
 
   *nbF = ARRAY_SIZE(TagLeetFuncs);
   return TagLeetFuncs;
@@ -124,6 +126,12 @@ static void NppGoBack()
 {
   if (TheApp != NULL)
     TheApp->GoBack();
+}
+
+static void NppAutoComplete()
+{
+  if (TheApp != NULL)
+    TheApp->AutoComplete();
 }
 
 void TagLeetAbout()
