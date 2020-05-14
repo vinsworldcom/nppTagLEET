@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <string>
 #include <shlobj.h>
+#include <shellapi.h>
 
 #include <malloc.h>
 #include <shlwapi.h>
@@ -89,7 +90,7 @@ void SetTagsFilePath(HWND NppHndl, NppCallContext *NppC, char *TagsFilePath)
             // LPITEMIDLIST rootPidl;
             // TCHAR currDir[MAX_PATH];
             ::SendMessage(NppHndl, NPPM_GETCURRENTDIRECTORY, MAX_PATH, (LPARAM)TagsFilePath);
-            
+
             // if (SHParseDisplayName(currDir, NULL, &rootPidl, 0, NULL) == S_OK)
                 // info.pidlRoot = rootPidl;
 
@@ -104,6 +105,8 @@ void SetTagsFilePath(HWND NppHndl, NppCallContext *NppC, char *TagsFilePath)
                 // Return is true if success.
 //              if (
                 ::SHGetPathFromIDListA( pidl, TagsFilePath );
+                ::ShellExecuteA(NppHndl, "open", "ctags.exe", "-R", TagsFilePath, SW_SHOW);
+
                 // SendMessage( GetDlgItem( hWndDlg, IDC_EDT_GITPATH ), WM_SETTEXT, 0, ( LPARAM )TagsFilePath );
 //                )
 //              {
@@ -384,7 +387,7 @@ HFONT TagLeetApp::UpdateListViewFont(int change, bool reset)
   {
     ListViewFont = OldListViewFont;
     ListViewFontHeight = OldFontHeight;
-    
+
   }
 
   return ListViewFont;
@@ -446,7 +449,7 @@ TL_ERR TagLeetApp::GetTagsFilePath(NppCallContext *NppC, char *TagFileBuff,
     LastTagFileSet(Path);
     return TL_ERR_OK;
   }
-  
+
   return TL_ERR_NOT_EXIST;
   // /* Failed to find a tag file on the path. Try using the last tag file we
    // * found. */
@@ -626,11 +629,11 @@ void TagLeetApp::AutoComplete()
     err = PopulateTagList(&TLCtx);
     if (err)
       return;
-  
+
     int Idx;
     TagList::TagListItem *Item;
     std::string wList;
-  
+
     // We want prefix match, after all, this is autocomplete
     DoPrefixMatch = true;
     TLCtx.GetLineNumFromTag(DoPrefixMatch, &TList);
@@ -640,7 +643,7 @@ void TagLeetApp::AutoComplete()
       wList += Item->Tag;
       wList += " ";
     }
-  
+
     // Must clear the selection that TagLookupContext did for us
     int currpos = ( int )::SendMessage( NppC.SciHndl, SCI_GETCURRENTPOS, 0, 0 );
     SendMessage( NppC.SciHndl, SCI_SETEMPTYSELECTION, currpos, 0 );
@@ -653,7 +656,7 @@ void TagLeetApp::AutoComplete()
       Form->RefreshList(&TLCtx);
       return;
     }
-  
+
     Form = new TagLeetForm(&NppC);
     if (Form == NULL)
       return;
