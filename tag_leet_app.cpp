@@ -25,6 +25,7 @@
 #include <tchar.h>
 #include <stdio.h>
 #include <string>
+#include <shlobj.h>
 
 #include <malloc.h>
 #include <shlwapi.h>
@@ -53,6 +54,70 @@ const TCHAR iniUseNppAutoC[]  = TEXT( "UseNppAutoC" );
 
 bool g_useNppColors = false;
 bool g_useNppAutoC  = true;
+
+static int __stdcall BrowseCallbackProc(HWND hwnd, UINT uMsg, LPARAM, LPARAM pData)
+{
+    if (uMsg == BFFM_INITIALIZED)
+        ::SendMessage(hwnd, BFFM_SETSELECTION, TRUE, pData);
+    return 0;
+}
+
+void SetTagsFilePath(HWND NppHndl, NppCallContext *NppC, char *TagsFilePath)
+{
+    TCHAR Msg[2048];
+
+    ::_sntprintf(Msg, ARRAY_SIZE(Msg),
+      TEXT("'tags' file not found on path of:\n%s\n\nCreate?"), NppC->Path);
+    int response = ::MessageBox(NppHndl, Msg, TEXT("TagLEET"), MB_YESNO);
+    if (response == IDYES)
+    {
+        LPMALLOC pShellMalloc = 0;
+        if (::SHGetMalloc(&pShellMalloc) == NO_ERROR)
+        {
+            // If we were able to get the shell malloc object,
+            // then proceed by initializing the BROWSEINFO stuct
+            BROWSEINFO info;
+            ZeroMemory(&info, sizeof(info));
+            info.hwndOwner          = NppHndl;
+            info.pidlRoot           = NULL;
+            info.pszDisplayName     = (LPTSTR)new TCHAR[MAX_PATH];
+            info.lpszTitle          = TEXT( "CTags root directory (indexed recursively)" );
+            info.ulFlags            = BIF_RETURNONLYFSDIRS | BIF_USENEWUI | BIF_NONEWFOLDERBUTTON;
+            info.lpfn               = BrowseCallbackProc;
+            info.lParam             = (LPARAM)TagsFilePath;
+
+            // LPITEMIDLIST rootPidl;
+            // TCHAR currDir[MAX_PATH];
+            ::SendMessage(NppHndl, NPPM_GETCURRENTDIRECTORY, MAX_PATH, (LPARAM)TagsFilePath);
+            
+            // if (SHParseDisplayName(currDir, NULL, &rootPidl, 0, NULL) == S_OK)
+                // info.pidlRoot = rootPidl;
+
+           // Execute the browsing dialog.
+            LPITEMIDLIST pidl = ::SHBrowseForFolder(&info);
+
+           // pidl will be null if they cancel the browse dialog.
+            // pidl will be not null when they select a folder.
+            if (pidl)
+            {
+                // Try to convert the pidl to a display string.
+                // Return is true if success.
+//              if (
+                ::SHGetPathFromIDListA( pidl, TagsFilePath );
+                // SendMessage( GetDlgItem( hWndDlg, IDC_EDT_GITPATH ), WM_SETTEXT, 0, ( LPARAM )TagsFilePath );
+//                )
+//              {
+                    // Set edit control to the directory path.
+//                  ::SetWindowText(::GetDlgItem(hDialog, IDC_EDT_DIR), TagsFilePath);
+//              }
+                pShellMalloc->Free(pidl);
+            }
+            pShellMalloc->Release();
+            delete [] info.pszDisplayName;
+        }
+    }
+    return;
+}
 
 TagLeetApp::TagLeetApp(const struct NppData *NppDataObj)
 {
@@ -381,19 +446,20 @@ TL_ERR TagLeetApp::GetTagsFilePath(NppCallContext *NppC, char *TagFileBuff,
     LastTagFileSet(Path);
     return TL_ERR_OK;
   }
-
-  /* Failed to find a tag file on the path. Try using the last tag file we
-   * found. */
-  err = LastTagFileGet(Path, ARRAY_SIZE(Path));
-  if (err)
-    return err;
-  FileHndl = ::CreateFile(Path, GENERIC_READ, FILE_SHARE_READ, NULL,
-    OPEN_EXISTING, 0, NULL);
-  if (FileHndl == INVALID_HANDLE_VALUE)
-    return TL_ERR_NOT_EXIST;
-  ::CloseHandle(FileHndl);
-  TSTR_to_str(Path, -1, TagFileBuff, BuffSize);
-  return TL_ERR_OK;
+  
+  return TL_ERR_NOT_EXIST;
+  // /* Failed to find a tag file on the path. Try using the last tag file we
+   // * found. */
+  // err = LastTagFileGet(Path, ARRAY_SIZE(Path));
+  // if (err)
+    // return err;
+  // FileHndl = ::CreateFile(Path, GENERIC_READ, FILE_SHARE_READ, NULL,
+    // OPEN_EXISTING, 0, NULL);
+  // if (FileHndl == INVALID_HANDLE_VALUE)
+    // return TL_ERR_NOT_EXIST;
+  // ::CloseHandle(FileHndl);
+  // TSTR_to_str(Path, -1, TagFileBuff, BuffSize);
+  // return TL_ERR_OK;
 }
 
 void TagLeetApp::LookupTag()
@@ -408,9 +474,7 @@ void TagLeetApp::LookupTag()
   err = GetTagsFilePath(&NppC, TagsFilePath, sizeof(TagsFilePath));
   if (err)
   {
-    ::_sntprintf(Msg, ARRAY_SIZE(Msg),
-      TEXT("'tags' file not found on path of:\n%s"), NppC.Path);
-    ::MessageBox(NppHndl, Msg, TEXT("TagLEET"), MB_ICONEXCLAMATION);
+    SetTagsFilePath(NppHndl, &NppC, TagsFilePath);
     return;
   }
 
@@ -542,9 +606,7 @@ void TagLeetApp::AutoComplete()
   err = GetTagsFilePath(&NppC, TagsFilePath, sizeof(TagsFilePath));
   if (err)
   {
-    ::_sntprintf(Msg, ARRAY_SIZE(Msg),
-      TEXT("'tags' file not found on path of:\n%s"), NppC.Path);
-    ::MessageBox(NppHndl, Msg, TEXT("TagLEET"), MB_ICONEXCLAMATION);
+    SetTagsFilePath(NppHndl, &NppC, TagsFilePath);
     return;
   }
 
