@@ -607,6 +607,32 @@ TL_ERR TagLeetApp::PopulateTagList(TagLookupContext *TLCtx)
   return TL_ERR_OK;
 }
 
+void TagLeetApp::UpdateTagDb()
+{
+  TL_ERR err;
+  TlAppSync Sync(this);
+  NppCallContext NppC(this);
+  char TagsFilePath[TL_MAX_PATH];
+
+  err = GetTagsFilePath(&NppC, TagsFilePath, sizeof(TagsFilePath));
+  if (err)
+    return;
+
+  char Path[TL_MAX_PATH + 16];
+  int n = (int)::strlen(TagsFilePath);
+  ::memcpy(Path, TagsFilePath, n * sizeof(TCHAR));
+
+  if (Path[n-1] == 's' &&
+      Path[n-2] == 'g' &&
+      Path[n-3] == 'a' &&
+      Path[n-4] == 't' &&
+      Path[n-5] == '\\')
+  {
+    Path[n-5] = '\0';
+    CreateTagsDb(NppHndl, &NppC, Path);
+  }
+}
+
 void TagLeetApp::AutoComplete()
 {
   TL_ERR err;
