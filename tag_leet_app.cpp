@@ -63,13 +63,37 @@ static int __stdcall BrowseCallbackProc(HWND hwnd, UINT uMsg, LPARAM, LPARAM pDa
     return 0;
 }
 
+void CreateTagsDb(HWND NppHndl, NppCallContext *NppC, char *TagsFilePath)
+{
+    char moduleFileName[MAX_PATH];
+    GetModuleFileNameA((HMODULE)NppC->App->GetInstance(), moduleFileName, MAX_PATH);
+
+    std::string strModuleFileName(moduleFileName);
+    size_t lastindex = strModuleFileName.find_last_of(".");
+    strModuleFileName = strModuleFileName.substr(0, lastindex);
+    strModuleFileName += "\\ctags.exe";
+
+    int ret = (int)::ShellExecuteA(NppHndl, "open", strModuleFileName.c_str(), "--extra=fq --fields=+n --file-scope=yes -R", TagsFilePath, SW_HIDE);
+    if (ret <= 32 )
+    {
+        if (ret == ERROR_FILE_NOT_FOUND)
+        {
+            MessageBoxA(NppHndl, strModuleFileName.c_str(), "File Not Found", MB_OK | MB_ICONEXCLAMATION);
+        }
+        else
+        {
+            MessageBoxA(NppHndl, "Cannot generate ctags database", "Unknown error", MB_OK | MB_ICONEXCLAMATION);
+        }
+    }
+}
+
 void SetTagsFilePath(HWND NppHndl, NppCallContext *NppC, char *TagsFilePath)
 {
     TCHAR Msg[2048];
 
     ::_sntprintf(Msg, ARRAY_SIZE(Msg),
       TEXT("'tags' file not found on path of:\n%s\n\nCreate?"), NppC->Path);
-    int response = ::MessageBox(NppHndl, Msg, TEXT("TagLEET"), MB_YESNO);
+    int response = ::MessageBox(NppHndl, Msg, TEXT("TagLEET"), MB_YESNO | MB_ICONWARNING);
     if (response == IDYES)
     {
         LPMALLOC pShellMalloc = 0;
@@ -87,32 +111,18 @@ void SetTagsFilePath(HWND NppHndl, NppCallContext *NppC, char *TagsFilePath)
             info.lpfn               = BrowseCallbackProc;
             info.lParam             = (LPARAM)TagsFilePath;
 
-            // LPITEMIDLIST rootPidl;
-            // TCHAR currDir[MAX_PATH];
             ::SendMessage(NppHndl, NPPM_GETCURRENTDIRECTORY, MAX_PATH, (LPARAM)TagsFilePath);
 
-            // if (SHParseDisplayName(currDir, NULL, &rootPidl, 0, NULL) == S_OK)
-                // info.pidlRoot = rootPidl;
-
-           // Execute the browsing dialog.
+            // Execute the browsing dialog.
             LPITEMIDLIST pidl = ::SHBrowseForFolder(&info);
 
-           // pidl will be null if they cancel the browse dialog.
+            // pidl will be null if they cancel the browse dialog.
             // pidl will be not null when they select a folder.
             if (pidl)
             {
-                // Try to convert the pidl to a display string.
-                // Return is true if success.
-//              if (
                 ::SHGetPathFromIDListA( pidl, TagsFilePath );
-                ::ShellExecuteA(NppHndl, "open", "ctags.exe", "-R", TagsFilePath, SW_SHOW);
+                CreateTagsDb(NppHndl, NppC, TagsFilePath);
 
-                // SendMessage( GetDlgItem( hWndDlg, IDC_EDT_GITPATH ), WM_SETTEXT, 0, ( LPARAM )TagsFilePath );
-//                )
-//              {
-                    // Set edit control to the directory path.
-//                  ::SetWindowText(::GetDlgItem(hDialog, IDC_EDT_DIR), TagsFilePath);
-//              }
                 pShellMalloc->Free(pidl);
             }
             pShellMalloc->Release();
@@ -423,7 +433,7 @@ void TagLeetApp::Unlock()
 TL_ERR TagLeetApp::GetTagsFilePath(NppCallContext *NppC, char *TagFileBuff,
   int BuffSize)
 {
-  TL_ERR err;
+  // TL_ERR err;
   static const TCHAR TagsFileName[] = _T("tags");
   TCHAR Path[TL_MAX_PATH + 16];
   HANDLE FileHndl;
