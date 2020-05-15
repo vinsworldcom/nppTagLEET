@@ -52,9 +52,11 @@ const TCHAR configFileName[]  = TEXT( "TagLEET.ini" );
 const TCHAR sectionName[]     = TEXT( "Settings" );
 const TCHAR iniUseNppColors[] = TEXT( "UseNppColors" );
 const TCHAR iniUseNppAutoC[]  = TEXT( "UseNppAutoC" );
+const TCHAR iniUpdateOnSave[] = TEXT( "UpdateOnSave" );
 
 bool g_useNppColors = false;
 bool g_useNppAutoC  = true;
+bool g_UpdateOnSave = false;
 
 static int __stdcall BrowseCallbackProc(HWND hwnd, UINT uMsg, LPARAM, LPARAM pData)
 {
@@ -181,6 +183,8 @@ TagLeetApp::TagLeetApp(const struct NppData *NppDataObj)
                    iniFilePath );
   g_useNppAutoC  = ::GetPrivateProfileInt( sectionName, iniUseNppAutoC, 1,
                    iniFilePath );
+  g_UpdateOnSave = ::GetPrivateProfileInt( sectionName, iniUpdateOnSave, 0,
+                   iniFilePath );
 }
 
 TagLeetApp::~TagLeetApp()
@@ -218,6 +222,8 @@ void TagLeetApp::Shutdown()
                                g_useNppColors ? TEXT( "1" ) : TEXT( "0" ), iniFilePath );
   ::WritePrivateProfileString( sectionName, iniUseNppAutoC,
                                g_useNppAutoC ? TEXT( "1" ) : TEXT( "0" ), iniFilePath );
+  ::WritePrivateProfileString( sectionName, iniUpdateOnSave,
+                               g_UpdateOnSave ? TEXT( "1" ) : TEXT( "0" ), iniFilePath );
 
   delete this;
 }
@@ -609,6 +615,9 @@ TL_ERR TagLeetApp::PopulateTagList(TagLookupContext *TLCtx)
 
 void TagLeetApp::UpdateTagDb()
 {
+  if (!g_UpdateOnSave)
+    return;
+
   TL_ERR err;
   TlAppSync Sync(this);
   NppCallContext NppC(this);
