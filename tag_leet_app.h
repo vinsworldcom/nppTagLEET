@@ -109,6 +109,7 @@ public:
   void GoBack();
   void GoForward();
   void AutoComplete();
+  void UpdateTagDb();
   void Lock();
   void Unlock();
   TL_ERR GoToFileLine(const NppLoc *Loc, const char *Tag = NULL);

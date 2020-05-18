@@ -25,6 +25,8 @@
 #include <tchar.h>
 #include <stdio.h>
 #include <string>
+#include <shlobj.h>
+#include <shellapi.h>
 
 #include <malloc.h>
 #include <shlwapi.h>
@@ -50,9 +52,87 @@ const TCHAR configFileName[]  = TEXT( "TagLEET.ini" );
 const TCHAR sectionName[]     = TEXT( "Settings" );
 const TCHAR iniUseNppColors[] = TEXT( "UseNppColors" );
 const TCHAR iniUseNppAutoC[]  = TEXT( "UseNppAutoC" );
+const TCHAR iniUpdateOnSave[] = TEXT( "UpdateOnSave" );
 
 bool g_useNppColors = false;
 bool g_useNppAutoC  = true;
+bool g_UpdateOnSave = false;
+
+static int __stdcall BrowseCallbackProc(HWND hwnd, UINT uMsg, LPARAM, LPARAM pData)
+{
+    if (uMsg == BFFM_INITIALIZED)
+        ::SendMessage(hwnd, BFFM_SETSELECTION, TRUE, pData);
+    return 0;
+}
+
+void CreateTagsDb(HWND NppHndl, NppCallContext *NppC, char *TagsFilePath)
+{
+    char moduleFileName[MAX_PATH];
+    GetModuleFileNameA((HMODULE)NppC->App->GetInstance(), moduleFileName, MAX_PATH);
+
+    std::string strModuleFileName(moduleFileName);
+    size_t lastindex = strModuleFileName.find_last_of(".");
+    strModuleFileName = strModuleFileName.substr(0, lastindex);
+    strModuleFileName += "\\ctags.exe";
+
+    int ret = (int)::ShellExecuteA(NppHndl, "open", strModuleFileName.c_str(), "--extra=fq --fields=+n --file-scope=yes -R", TagsFilePath, SW_HIDE);
+    if (ret <= 32 )
+    {
+        if (ret == ERROR_FILE_NOT_FOUND)
+        {
+            MessageBoxA(NppHndl, strModuleFileName.c_str(), "File Not Found", MB_OK | MB_ICONEXCLAMATION);
+        }
+        else
+        {
+            MessageBoxA(NppHndl, "Cannot generate ctags database", "Unknown error", MB_OK | MB_ICONEXCLAMATION);
+        }
+    }
+}
+
+void SetTagsFilePath(HWND NppHndl, NppCallContext *NppC, char *TagsFilePath)
+{
+    TCHAR Msg[2048];
+
+    ::_sntprintf(Msg, ARRAY_SIZE(Msg),
+      TEXT("'tags' file not found on path of:\n%s\n\nCreate?"), NppC->Path);
+    int response = ::MessageBox(NppHndl, Msg, TEXT("TagLEET"), MB_YESNO | MB_ICONWARNING);
+    if (response == IDYES)
+    {
+        LPMALLOC pShellMalloc = 0;
+        if (::SHGetMalloc(&pShellMalloc) == NO_ERROR)
+        {
+            // If we were able to get the shell malloc object,
+            // then proceed by initializing the BROWSEINFO stuct
+            BROWSEINFO info;
+            ZeroMemory(&info, sizeof(info));
+            info.hwndOwner          = NppHndl;
+            info.pidlRoot           = NULL;
+            info.pszDisplayName     = (LPTSTR)new TCHAR[MAX_PATH];
+            info.lpszTitle          = TEXT( "CTags root directory (indexed recursively)" );
+            info.ulFlags            = BIF_RETURNONLYFSDIRS | BIF_USENEWUI | BIF_NONEWFOLDERBUTTON;
+            info.lpfn               = BrowseCallbackProc;
+            info.lParam             = (LPARAM)TagsFilePath;
+
+            ::SendMessage(NppHndl, NPPM_GETCURRENTDIRECTORY, MAX_PATH, (LPARAM)TagsFilePath);
+
+            // Execute the browsing dialog.
+            LPITEMIDLIST pidl = ::SHBrowseForFolder(&info);
+
+            // pidl will be null if they cancel the browse dialog.
+            // pidl will be not null when they select a folder.
+            if (pidl)
+            {
+                ::SHGetPathFromIDListA( pidl, TagsFilePath );
+                CreateTagsDb(NppHndl, NppC, TagsFilePath);
+
+                pShellMalloc->Free(pidl);
+            }
+            pShellMalloc->Release();
+            delete [] info.pszDisplayName;
+        }
+    }
+    return;
+}
 
 TagLeetApp::TagLeetApp(const struct NppData *NppDataObj)
 {
@@ -103,6 +183,8 @@ TagLeetApp::TagLeetApp(const struct NppData *NppDataObj)
                    iniFilePath );
   g_useNppAutoC  = ::GetPrivateProfileInt( sectionName, iniUseNppAutoC, 1,
                    iniFilePath );
+  g_UpdateOnSave = ::GetPrivateProfileInt( sectionName, iniUpdateOnSave, 0,
+                   iniFilePath );
 }
 
 TagLeetApp::~TagLeetApp()
@@ -140,6 +222,8 @@ void TagLeetApp::Shutdown()
                                g_useNppColors ? TEXT( "1" ) : TEXT( "0" ), iniFilePath );
   ::WritePrivateProfileString( sectionName, iniUseNppAutoC,
                                g_useNppAutoC ? TEXT( "1" ) : TEXT( "0" ), iniFilePath );
+  ::WritePrivateProfileString( sectionName, iniUpdateOnSave,
+                               g_UpdateOnSave ? TEXT( "1" ) : TEXT( "0" ), iniFilePath );
 
   delete this;
 }
@@ -319,7 +403,7 @@ HFONT TagLeetApp::UpdateListViewFont(int change, bool reset)
   {
     ListViewFont = OldListViewFont;
     ListViewFontHeight = OldFontHeight;
-    
+
   }
 
   return ListViewFont;
@@ -355,7 +439,7 @@ void TagLeetApp::Unlock()
 TL_ERR TagLeetApp::GetTagsFilePath(NppCallContext *NppC, char *TagFileBuff,
   int BuffSize)
 {
-  TL_ERR err;
+  // TL_ERR err;
   static const TCHAR TagsFileName[] = _T("tags");
   TCHAR Path[TL_MAX_PATH + 16];
   HANDLE FileHndl;
@@ -382,18 +466,19 @@ TL_ERR TagLeetApp::GetTagsFilePath(NppCallContext *NppC, char *TagFileBuff,
     return TL_ERR_OK;
   }
 
-  /* Failed to find a tag file on the path. Try using the last tag file we
-   * found. */
-  err = LastTagFileGet(Path, ARRAY_SIZE(Path));
-  if (err)
-    return err;
-  FileHndl = ::CreateFile(Path, GENERIC_READ, FILE_SHARE_READ, NULL,
-    OPEN_EXISTING, 0, NULL);
-  if (FileHndl == INVALID_HANDLE_VALUE)
-    return TL_ERR_NOT_EXIST;
-  ::CloseHandle(FileHndl);
-  TSTR_to_str(Path, -1, TagFileBuff, BuffSize);
-  return TL_ERR_OK;
+  return TL_ERR_NOT_EXIST;
+  // /* Failed to find a tag file on the path. Try using the last tag file we
+   // * found. */
+  // err = LastTagFileGet(Path, ARRAY_SIZE(Path));
+  // if (err)
+    // return err;
+  // FileHndl = ::CreateFile(Path, GENERIC_READ, FILE_SHARE_READ, NULL,
+    // OPEN_EXISTING, 0, NULL);
+  // if (FileHndl == INVALID_HANDLE_VALUE)
+    // return TL_ERR_NOT_EXIST;
+  // ::CloseHandle(FileHndl);
+  // TSTR_to_str(Path, -1, TagFileBuff, BuffSize);
+  // return TL_ERR_OK;
 }
 
 void TagLeetApp::LookupTag()
@@ -408,9 +493,7 @@ void TagLeetApp::LookupTag()
   err = GetTagsFilePath(&NppC, TagsFilePath, sizeof(TagsFilePath));
   if (err)
   {
-    ::_sntprintf(Msg, ARRAY_SIZE(Msg),
-      TEXT("'tags' file not found on path of:\n%s"), NppC.Path);
-    ::MessageBox(NppHndl, Msg, TEXT("TagLEET"), MB_ICONEXCLAMATION);
+    SetTagsFilePath(NppHndl, &NppC, TagsFilePath);
     return;
   }
 
@@ -530,6 +613,35 @@ TL_ERR TagLeetApp::PopulateTagList(TagLookupContext *TLCtx)
   return TL_ERR_OK;
 }
 
+void TagLeetApp::UpdateTagDb()
+{
+  if (!g_UpdateOnSave)
+    return;
+
+  TL_ERR err;
+  TlAppSync Sync(this);
+  NppCallContext NppC(this);
+  char TagsFilePath[TL_MAX_PATH];
+
+  err = GetTagsFilePath(&NppC, TagsFilePath, sizeof(TagsFilePath));
+  if (err)
+    return;
+
+  char Path[TL_MAX_PATH + 16];
+  int n = (int)::strlen(TagsFilePath);
+  ::memcpy(Path, TagsFilePath, n * sizeof(TCHAR));
+
+  if (Path[n-1] == 's' &&
+      Path[n-2] == 'g' &&
+      Path[n-3] == 'a' &&
+      Path[n-4] == 't' &&
+      Path[n-5] == '\\')
+  {
+    Path[n-5] = '\0';
+    CreateTagsDb(NppHndl, &NppC, Path);
+  }
+}
+
 void TagLeetApp::AutoComplete()
 {
   TL_ERR err;
@@ -542,9 +654,7 @@ void TagLeetApp::AutoComplete()
   err = GetTagsFilePath(&NppC, TagsFilePath, sizeof(TagsFilePath));
   if (err)
   {
-    ::_sntprintf(Msg, ARRAY_SIZE(Msg),
-      TEXT("'tags' file not found on path of:\n%s"), NppC.Path);
-    ::MessageBox(NppHndl, Msg, TEXT("TagLEET"), MB_ICONEXCLAMATION);
+    SetTagsFilePath(NppHndl, &NppC, TagsFilePath);
     return;
   }
 
@@ -564,11 +674,11 @@ void TagLeetApp::AutoComplete()
     err = PopulateTagList(&TLCtx);
     if (err)
       return;
-  
+
     int Idx;
     TagList::TagListItem *Item;
     std::string wList;
-  
+
     // We want prefix match, after all, this is autocomplete
     DoPrefixMatch = true;
     TLCtx.GetLineNumFromTag(DoPrefixMatch, &TList);
@@ -578,7 +688,7 @@ void TagLeetApp::AutoComplete()
       wList += Item->Tag;
       wList += " ";
     }
-  
+
     // Must clear the selection that TagLookupContext did for us
     int currpos = ( int )::SendMessage( NppC.SciHndl, SCI_GETCURRENTPOS, 0, 0 );
     SendMessage( NppC.SciHndl, SCI_SETEMPTYSELECTION, currpos, 0 );
@@ -591,7 +701,7 @@ void TagLeetApp::AutoComplete()
       Form->RefreshList(&TLCtx);
       return;
     }
-  
+
     Form = new TagLeetForm(&NppC);
     if (Form == NULL)
       return;

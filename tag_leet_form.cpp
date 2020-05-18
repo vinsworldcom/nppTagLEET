@@ -32,6 +32,7 @@ using namespace TagLEET_NPP;
 
 extern bool g_useNppColors;
 extern bool g_useNppAutoC;
+extern bool g_UpdateOnSave;
 
 #define SORT_UP_IMG_IDX    13
 #define SORT_DOWN_IMG_IDX  14
@@ -722,7 +723,20 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
               }
               break;
             case VK_MULTIPLY:
-              if (::GetKeyState(VK_CONTROL) & 0x8000)
+              if (::GetKeyState(VK_CONTROL) & 0x8000 && ::GetKeyState(VK_MENU) & 0x8000)
+              {
+                if ( g_UpdateOnSave )
+                {
+                  g_UpdateOnSave = false;
+                  UpdateStatusText(TEXT("Update on Save DISabled"));
+                }
+                else
+                {
+                  g_UpdateOnSave = true;
+                  UpdateStatusText(TEXT("Update on Save ENabled"));
+                }
+              }
+              else if (::GetKeyState(VK_CONTROL) & 0x8000)
               {
                 if ( g_useNppAutoC )
                 {
