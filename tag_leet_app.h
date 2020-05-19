@@ -120,6 +120,7 @@ public:
   HFONT GetStatusFont() const { return StatusFont; }
   HFONT GetListViewFont() const { return ListViewFont; }
   int GetStatusHeight() const { return StatusHeight; }
+  int GetEditHeight() const { return EditHeight; }
   void Shutdown();
   TL_ERR GetTagsFilePath(NppCallContext *NppC, char *TagFileBuff, int BuffSize);
 
@@ -161,6 +162,7 @@ private:
   unsigned int FormHeight;  
   bool HeightWidthValid;
   int StatusHeight;
+  int EditHeight = 120;
   HFONT StatusFont;
   unsigned int ListViewFontHeight;
   unsigned int DefaultListViewFontHeight;

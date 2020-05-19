@@ -629,7 +629,7 @@ void TagLeetApp::UpdateTagDb()
 
   char Path[TL_MAX_PATH + 16];
   int n = (int)::strlen(TagsFilePath);
-  ::memcpy(Path, TagsFilePath, n * sizeof(TCHAR));
+  ::memcpy(Path, TagsFilePath, n * sizeof(char));
 
   if (Path[n-1] == 's' &&
       Path[n-2] == 'g' &&

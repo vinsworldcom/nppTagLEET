@@ -25,6 +25,7 @@
 #include <tchar.h>
 #include <commctrl.h>
 #include <malloc.h>
+#include <fstream>
 
 #include "resource.h"
 
@@ -45,6 +46,7 @@ TagLeetForm::TagLeetForm(NppCallContext *NppC)
   FormHWnd = NULL;
   LViewHWnd = NULL;
   StatusHWnd = NULL;
+  EditHWnd = NULL;
   DoPrefixMatch = false;
   DoAutoComplete = false;
   ::memset(&BackLoc, 0, sizeof(BackLoc));
@@ -163,17 +165,22 @@ void TagLeetForm::OnResize()
 {
   RECT Rect;
   int StatusHeight;
+  int EditHeight;
   int FocusIdx;
 
   ::GetClientRect(FormHWnd, &Rect);
   StatusHeight = App->GetStatusHeight();
+  EditHeight = App->GetEditHeight();
   ::SetWindowPos(LViewHWnd, NULL, 0,
-    0, Rect.right, Rect.bottom - StatusHeight,
+    0, Rect.right, Rect.bottom - StatusHeight - EditHeight,
     SWP_NOZORDER);
   FocusIdx = ListView_GetNextItem(LViewHWnd, -1, LVNI_FOCUSED);
   ListView_EnsureVisible(LViewHWnd, FocusIdx, FALSE);
   ::SetWindowPos(StatusHWnd, NULL,
     0, Rect.bottom - StatusHeight, Rect.right, StatusHeight,
+    SWP_NOZORDER);
+  ::SetWindowPos(EditHWnd, NULL,
+    0, Rect.bottom - StatusHeight - EditHeight, Rect.right, EditHeight,
     SWP_NOZORDER);
 
   ::GetWindowRect(FormHWnd, &Rect);
@@ -236,8 +243,16 @@ void TagLeetForm::ChangeColors()
   ListView_SetTextBkColor(LViewHWnd, colorBg);
   ListView_SetTextColor(LViewHWnd, colorFg);
 
+// TODO:2020-05-19:MVINCENT:make colors work in edit control
+  SetBkColor(GetDC(EditHWnd), colorBg);
+  SetTextColor(GetDC(EditHWnd), colorFg);
+
   ::SendMessage(LViewHWnd, WM_SETREDRAW, TRUE, 0);
   ::RedrawWindow(LViewHWnd, NULL, NULL,
+    RDW_ERASE  | RDW_INVALIDATE | RDW_ALLCHILDREN);
+
+  ::SendMessage(EditHWnd, WM_SETREDRAW, TRUE, 0);
+  ::RedrawWindow(EditHWnd, NULL, NULL,
     RDW_ERASE  | RDW_INVALIDATE | RDW_ALLCHILDREN);
 }
 
@@ -250,6 +265,7 @@ TL_ERR TagLeetForm::CreateListView(HWND hwnd)
   TL_ERR err = TL_ERR_OK;
   HIMAGELIST hImgList;
   int StatusHeight = App->GetStatusHeight();
+  int EditHeight = App->GetEditHeight();
   HFONT StatusFont = App->GetStatusFont();
   HFONT ListViewFont = App->GetListViewFont();
   LVCOLUMN LvCol;
@@ -270,9 +286,16 @@ TL_ERR TagLeetForm::CreateListView(HWND hwnd)
 
   LViewHWnd = ::CreateWindow(WC_LISTVIEW, NULL,
     WS_CHILD | LVS_REPORT | LVS_SINGLESEL | WS_VISIBLE,
-    0, 0, Rect.right, Rect.bottom - StatusHeight,
+    0, 0, Rect.right, Rect.bottom - StatusHeight - EditHeight,
     hwnd, NULL, App->GetInstance(), NULL);
   if (LViewHWnd == NULL)
+    return TL_ERR_GENERAL;
+// TODO:2020-05-19:MVINCENT:add rebar to resize edit and listview controls
+  EditHWnd = ::CreateWindow(WC_EDIT, NULL,
+    WS_CHILD | WS_VSCROLL | WS_VISIBLE | ES_MULTILINE | ES_READONLY | ES_AUTOHSCROLL | ES_AUTOVSCROLL,
+    0, Rect.bottom - StatusHeight - EditHeight, Rect.right, EditHeight,
+    hwnd, NULL, App->GetInstance(), NULL);
+  if (EditHWnd == NULL)
     return TL_ERR_GENERAL;
 
   ListView_SetImageList(LViewHWnd, hImgList, LVSIL_SMALL);
@@ -606,13 +629,66 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
       }
       break;
 
+    case WM_TIMER:
+    {
+        KillTimer( FormHWnd, 1 );
+
+        // Get current list view item (need filename and line number)
+        int idx = ListView_GetNextItem( LViewHWnd, -1, LVIS_FOCUSED );
+        TagList::TagListItem *Item;
+        Item = GetItemData(idx);
+        if (Item == NULL)
+          return FALSE;
+
+        // Get tagsfilepath (which contains the '\tags' filename, so remove it)
+        char Path[TL_MAX_PATH + 16];
+        int n = (int)::strlen(TList.TagsFilePath);
+        ::memcpy(Path, TList.TagsFilePath, n * sizeof(char));
+        if (Path[n-1] == 's' &&
+            Path[n-2] == 'g' &&
+            Path[n-3] == 'a' &&
+            Path[n-4] == 't' &&
+            Path[n-5] == '\\')
+        {
+          Path[n-5] = '\0';
+        }
+
+        int iLine = atoi(Item->ExtLine);
+        std::string strFileToOpen(Path);
+        strFileToOpen += "\\";
+        strFileToOpen += Item->FileName;
+
+        // open the file for reading
+        std::ifstream file(strFileToOpen.c_str());
+        std::string strFileContent;
+        std::string strTemp;
+        // throw away top lines
+        int i;
+        for (i = 1; i < iLine; i++)
+        {
+            std::getline(file, strTemp);
+        }
+        // read and display next 10 lines
+        i = 0;
+        while (std::getline(file, strTemp) && i < 10)
+        {
+            strFileContent += strTemp;
+            strFileContent += "\r\n";
+            i++;
+        }
+        SetWindowTextA(EditHWnd, (LPCSTR)strFileContent.c_str());
+
+        return FALSE;
+    }
+
     case WM_NOTIFY:
     {
       LPNMHDR pnmh = (LPNMHDR)lParam;
       switch (pnmh->code)
       {
-        case NM_KILLFOCUS :
-          PostCloseMsg();
+        case NM_KILLFOCUS:
+          if (GetFocus() != EditHWnd)
+            PostCloseMsg();
           return 0;
         case NM_DBLCLK:
           if ( DoAutoComplete )
@@ -786,6 +862,10 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
           NMLISTVIEW *LvInfo = (NMLISTVIEW *)lParam;
           if (LvInfo->uNewState & LVIS_FOCUSED)
             UpdateStatusLine(LvInfo->iItem);
+
+          KillTimer( FormHWnd, 1 );
+          SetTimer( FormHWnd, 1, 200, NULL );
+
           return 0;
         }
         case LVN_COLUMNCLICK:

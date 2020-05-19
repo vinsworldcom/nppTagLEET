@@ -95,6 +95,7 @@ private:
   HWND FormHWnd;
   HWND LViewHWnd;
   HWND StatusHWnd;
+  HWND EditHWnd;
 };
 
 enum {
