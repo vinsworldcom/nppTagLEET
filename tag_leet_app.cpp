@@ -53,10 +53,14 @@ const TCHAR sectionName[]     = TEXT( "Settings" );
 const TCHAR iniUseNppColors[] = TEXT( "UseNppColors" );
 const TCHAR iniUseNppAutoC[]  = TEXT( "UseNppAutoC" );
 const TCHAR iniUpdateOnSave[] = TEXT( "UpdateOnSave" );
+const TCHAR iniPeekPre[]      = TEXT( "PeekPre" );
+const TCHAR iniPeekPost[]     = TEXT( "PeekPost" );
 
 bool g_useNppColors = false;
 bool g_useNppAutoC  = true;
 bool g_UpdateOnSave = false;
+int  g_PeekPre      = 2;
+int  g_PeekPost     = 9;
 
 static int __stdcall BrowseCallbackProc(HWND hwnd, UINT uMsg, LPARAM, LPARAM pData)
 {
@@ -191,6 +195,10 @@ TagLeetApp::TagLeetApp(const struct NppData *NppDataObj)
                    iniFilePath );
   g_UpdateOnSave = ::GetPrivateProfileInt( sectionName, iniUpdateOnSave, 0,
                    iniFilePath );
+  g_PeekPre      = ::GetPrivateProfileInt( sectionName, iniPeekPre, 2,
+                   iniFilePath );
+  g_PeekPost     = ::GetPrivateProfileInt( sectionName, iniPeekPost, 9,
+                   iniFilePath );
 }
 
 TagLeetApp::~TagLeetApp()
@@ -217,6 +225,8 @@ TagLeetApp::~TagLeetApp()
 
 void TagLeetApp::Shutdown()
 {
+  TCHAR buf[64];
+
   Lock();
   if (Form != NULL)
   {
@@ -230,6 +240,10 @@ void TagLeetApp::Shutdown()
                                g_useNppAutoC ? TEXT( "1" ) : TEXT( "0" ), iniFilePath );
   ::WritePrivateProfileString( sectionName, iniUpdateOnSave,
                                g_UpdateOnSave ? TEXT( "1" ) : TEXT( "0" ), iniFilePath );
+   _itot_s( g_PeekPre, buf, 64, 10 );
+  ::WritePrivateProfileString( sectionName, iniPeekPre, buf, iniFilePath );
+   _itot_s( g_PeekPost, buf, 64, 10 );
+  ::WritePrivateProfileString( sectionName, iniPeekPost, buf, iniFilePath );
 
   delete this;
 }

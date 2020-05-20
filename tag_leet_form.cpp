@@ -35,6 +35,8 @@ using namespace TagLEET_NPP;
 extern bool g_useNppColors;
 extern bool g_useNppAutoC;
 extern bool g_UpdateOnSave;
+extern int  g_PeekPre;
+extern int  g_PeekPost;
 
 #define SORT_UP_IMG_IDX    13
 #define SORT_DOWN_IMG_IDX  14
@@ -237,7 +239,7 @@ void TagLeetForm::ResizeEditViewFont(int change, bool reset)
     charFormat.cbSize = sizeof(charFormat);
     charFormat.dwMask = CFM_SIZE;
     charFormat.yHeight = EditViewFontHeight;
-    SendMessage(EditHWnd, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM) &charFormat);
+    SendMessage(EditHWnd, EM_SETCHARFORMAT, SPF_SETDEFAULT, (LPARAM) &charFormat);
 
     ::SendMessage(EditHWnd, WM_SETREDRAW, TRUE, 0);
     ::RedrawWindow(EditHWnd, NULL, NULL,
@@ -268,9 +270,10 @@ void TagLeetForm::ChangeColors()
   CHARFORMAT2 charFormat;
   ZeroMemory(&charFormat, sizeof(charFormat));
   charFormat.cbSize = sizeof(charFormat);
-  charFormat.dwMask = CFM_COLOR;
+  charFormat.dwMask = CFM_COLOR | CFM_BACKCOLOR;
   charFormat.crTextColor = colorFg;
-  SendMessage(EditHWnd, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM) &charFormat);
+  charFormat.crBackColor = colorBg;
+  SendMessage(EditHWnd, EM_SETCHARFORMAT, SPF_SETDEFAULT, (LPARAM) &charFormat);
 
   ::SendMessage(LViewHWnd, WM_SETREDRAW, TRUE, 0);
   ::RedrawWindow(LViewHWnd, NULL, NULL,
@@ -345,7 +348,7 @@ TL_ERR TagLeetForm::CreateListView(HWND hwnd)
   charFormat.bPitchAndFamily = FF_MODERN | DEFAULT_PITCH;
   charFormat.yHeight = EditViewFontHeight;
   _tcscpy(charFormat.szFaceName, fontFace);
-  SendMessage(EditHWnd, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM) &charFormat);
+  SendMessage(EditHWnd, EM_SETCHARFORMAT, SPF_SETDEFAULT, (LPARAM) &charFormat);
 
   ::SendMessage(LViewHWnd, WM_SETFONT, (WPARAM)ListViewFont, (LPARAM)0);
   ListView_SetExtendedListViewStyle(LViewHWnd, LVS_EX_FULLROWSELECT);
@@ -672,27 +675,55 @@ void TagLeetForm::UpdateEditView()
     std::string strFileContent;
     std::string strTemp;
 
-// TODO:2020-05-20:MVINCENT:RichEdit style for actual line
-/** 
- *  Add logic to get a few lines before, highlight (bold/ital) the actual
- *  line and then 10 lines after.
- */
-
+    int discard = max( 0, (iLine - g_PeekPre) );
     // throw away top lines
     int i;
-    for (i = 1; i < iLine; i++)
+    for (i = 1; i < discard; i++)
     {
         std::getline(file, strTemp);
     }
-    // read and display next 10 lines
+
+    // read PeekPre lines
     i = 0;
-    while (std::getline(file, strTemp) && i < 10)
+    while (i < g_PeekPre && std::getline(file, strTemp))
     {
         strFileContent += strTemp;
         strFileContent += "\r\n";
         i++;
     }
+
+    // read THE LINE
+    i = 0;
+    while (i < 1 && std::getline(file, strTemp))
+    {
+        strFileContent += strTemp;
+        strFileContent += "\r\n";
+        i++;
+    }
+
+    // read PeekPost lines
+    i = 0;
+    while (i < g_PeekPost && std::getline(file, strTemp))
+    {
+        strFileContent += strTemp;
+        strFileContent += "\r\n";
+        i++;
+    }
+
     SetWindowTextA(EditHWnd, (LPCSTR)strFileContent.c_str());
+
+    CHARFORMAT2 charFormat;
+    ZeroMemory(&charFormat, sizeof(charFormat));
+    charFormat.cbSize = sizeof(charFormat);
+    charFormat.dwMask = CFM_BOLD | CFM_ITALIC | CFM_COLOR | CFM_BACKCOLOR;
+    charFormat.dwEffects = CFE_BOLD | CFE_ITALIC;
+    charFormat.crTextColor = colorBg;
+    charFormat.crBackColor = colorFg;
+
+    int selStart = (int)::SendMessage( EditHWnd, EM_LINEINDEX, g_PeekPre, 0 );
+    int selEnd   = (int)::SendMessage( EditHWnd, EM_LINEINDEX, g_PeekPre+1, 0 );
+    SendMessage(EditHWnd, EM_SETSEL , selStart, selEnd);
+    SendMessage(EditHWnd, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM) &charFormat);
 }
 
 LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
