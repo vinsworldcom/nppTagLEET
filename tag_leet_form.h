@@ -59,6 +59,7 @@ private:
   LRESULT WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
   TagList::TagListItem *GetItemData(int ItemIdx);
   TL_ERR OpenTagLoc(TagList::TagListItem *Item);
+  void UpdateEditView();
   void UpdateStatusText(std::wstring message);
   void UpdateStatusLine(int FocusIdx);
   static int CALLBACK LvSortFunc(LPARAM Item1Ptr, LPARAM Item2Ptr,
@@ -66,6 +67,7 @@ private:
   void SetColumnSortArrow(int ColumnIdx, bool Show, bool Down=false);
   void ResizeForm(int change);
   void ResizeListViewFont(int change, bool reset);
+  void ResizeEditViewFont(int change, bool reset);
   void SetNppColors();
   void SetSysColors();
   void ChangeColors();

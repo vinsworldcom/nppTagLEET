@@ -119,6 +119,7 @@ public:
   HWND getCurrScintilla();
   HFONT GetStatusFont() const { return StatusFont; }
   HFONT GetListViewFont() const { return ListViewFont; }
+  int GetEditViewFontHeight() const { return EditViewFontHeight; }
   int GetStatusHeight() const { return StatusHeight; }
   int GetEditHeight() const { return EditHeight; }
   void Shutdown();
@@ -129,6 +130,7 @@ public:
   void UpdateFormScale(int change);
 
   HFONT UpdateListViewFont(int change, bool reset);
+  int UpdateEditViewFontHeight(int change, bool reset);
 
   static void SetInstance(HINSTANCE in_InstanceHndl);
 
@@ -167,6 +169,8 @@ private:
   unsigned int ListViewFontHeight;
   unsigned int DefaultListViewFontHeight;
   HFONT ListViewFont;
+  int EditViewFontHeight;
+  int DefaultEditViewFontHeight;
   bool DestroyOnDetachForm;
   TCHAR LastTagFile[TL_MAX_PATH];
 public:

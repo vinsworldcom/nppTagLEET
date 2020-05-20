@@ -26,6 +26,7 @@
 #include <commctrl.h>
 #include <malloc.h>
 #include <fstream>
+#include <richedit.h>
 
 #include "resource.h"
 
@@ -223,6 +224,26 @@ void TagLeetForm::ResizeListViewFont(int change, bool reset)
       RDW_ERASE  | RDW_INVALIDATE | RDW_ALLCHILDREN);
 }
 
+void TagLeetForm::ResizeEditViewFont(int change, bool reset)
+{
+    int EditViewFontHeight;
+
+    ::SendMessage(EditHWnd, WM_SETREDRAW, FALSE, 0);
+    App->UpdateEditViewFontHeight(change, reset);
+    EditViewFontHeight = App->GetEditViewFontHeight();
+
+    CHARFORMAT2 charFormat;
+    ZeroMemory(&charFormat, sizeof(charFormat));
+    charFormat.cbSize = sizeof(charFormat);
+    charFormat.dwMask = CFM_SIZE;
+    charFormat.yHeight = EditViewFontHeight;
+    SendMessage(EditHWnd, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM) &charFormat);
+
+    ::SendMessage(EditHWnd, WM_SETREDRAW, TRUE, 0);
+    ::RedrawWindow(EditHWnd, NULL, NULL,
+      RDW_ERASE  | RDW_INVALIDATE | RDW_ALLCHILDREN);
+}
+
 void TagLeetForm::SetNppColors()
 {
   colorFg = ( COLORREF )::SendMessage( App->getCurrScintilla(), SCI_STYLEGETFORE, 0, 0 );
@@ -243,9 +264,13 @@ void TagLeetForm::ChangeColors()
   ListView_SetTextBkColor(LViewHWnd, colorBg);
   ListView_SetTextColor(LViewHWnd, colorFg);
 
-// TODO:2020-05-19:MVINCENT:make colors work in edit control
-  SetBkColor(GetDC(EditHWnd), colorBg);
-  SetTextColor(GetDC(EditHWnd), colorFg);
+  SendMessage(EditHWnd, EM_SETBKGNDCOLOR, 0, colorBg);
+  CHARFORMAT2 charFormat;
+  ZeroMemory(&charFormat, sizeof(charFormat));
+  charFormat.cbSize = sizeof(charFormat);
+  charFormat.dwMask = CFM_COLOR;
+  charFormat.crTextColor = colorFg;
+  SendMessage(EditHWnd, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM) &charFormat);
 
   ::SendMessage(LViewHWnd, WM_SETREDRAW, TRUE, 0);
   ::RedrawWindow(LViewHWnd, NULL, NULL,
@@ -268,6 +293,7 @@ TL_ERR TagLeetForm::CreateListView(HWND hwnd)
   int EditHeight = App->GetEditHeight();
   HFONT StatusFont = App->GetStatusFont();
   HFONT ListViewFont = App->GetListViewFont();
+  int EditViewFontHeight = App->GetEditViewFontHeight();
   LVCOLUMN LvCol;
   HWND HdrHndl;
 
@@ -290,8 +316,11 @@ TL_ERR TagLeetForm::CreateListView(HWND hwnd)
     hwnd, NULL, App->GetInstance(), NULL);
   if (LViewHWnd == NULL)
     return TL_ERR_GENERAL;
-// TODO:2020-05-19:MVINCENT:add rebar to resize edit and listview controls
-  EditHWnd = ::CreateWindow(WC_EDIT, NULL,
+
+// TODO:2020-05-19:MVINCENT:add splitter to resize edit and listview controls
+
+  LoadLibrary(_T("Riched20.dll"));
+  EditHWnd = ::CreateWindow(RICHEDIT_CLASS, NULL,
     WS_CHILD | WS_VSCROLL | WS_VISIBLE | ES_MULTILINE | ES_READONLY | ES_AUTOHSCROLL | ES_AUTOVSCROLL,
     0, Rect.bottom - StatusHeight - EditHeight, Rect.right, EditHeight,
     hwnd, NULL, App->GetInstance(), NULL);
@@ -307,6 +336,16 @@ TL_ERR TagLeetForm::CreateListView(HWND hwnd)
     if (hImgList != NULL)
       Header_SetImageList(HdrHndl, hImgList);
   }
+
+  TCHAR fontFace[] = TEXT("Courier New");
+  CHARFORMAT2 charFormat;
+  ZeroMemory(&charFormat, sizeof(charFormat));
+  charFormat.cbSize = sizeof(charFormat);
+  charFormat.dwMask = CFM_FACE | CFM_SIZE;
+  charFormat.bPitchAndFamily = FF_MODERN | DEFAULT_PITCH;
+  charFormat.yHeight = EditViewFontHeight;
+  _tcscpy(charFormat.szFaceName, fontFace);
+  SendMessage(EditHWnd, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM) &charFormat);
 
   ::SendMessage(LViewHWnd, WM_SETFONT, (WPARAM)ListViewFont, (LPARAM)0);
   ListView_SetExtendedListViewStyle(LViewHWnd, LVS_EX_FULLROWSELECT);
@@ -377,7 +416,7 @@ static void CleanExtType(const char **StrPtr, int *StrSizePtr)
 {
   const char *Str = *StrPtr;
   int StrSize = *StrSizePtr;
-// TODO:2019-04-06:MVINCENT: parse out what we want, e.g., remove "line:"
+// parse out what we want, e.g., remove "line:"
   *StrPtr = Str;
   *StrSizePtr = StrSize;
 }
@@ -386,7 +425,7 @@ static void CleanExtLine(const char **StrPtr, int *StrSizePtr)
 {
   const char *Str = *StrPtr;
   int StrSize = *StrSizePtr;
-// TODO:2019-04-06:MVINCENT: parse out what we want, e.g., remove "line:"
+// parse out what we want, e.g., remove "line:"
   *StrPtr = Str;
   *StrSizePtr = StrSize;
 }
@@ -395,7 +434,7 @@ static void CleanExtFields(const char **StrPtr, int *StrSizePtr)
 {
   const char *Str = *StrPtr;
   int StrSize = *StrSizePtr;
-// TODO:2019-04-06:MVINCENT: parse out what we want, e.g., remove "line:"
+// parse out what we want, e.g., remove "line:"
   *StrPtr = Str;
   *StrSizePtr = StrSize;
 }
@@ -601,6 +640,61 @@ std::string ws2s(const std::wstring& wstr)
     return strTo;
 }
 
+void TagLeetForm::UpdateEditView()
+{
+    // Get current list view item (need filename and line number)
+    int idx = ListView_GetNextItem( LViewHWnd, -1, LVIS_FOCUSED );
+    TagList::TagListItem *Item;
+    Item = GetItemData(idx);
+    if (Item == NULL)
+      return;
+
+    // Get tagsfilepath (which contains the '\tags' filename, so remove it)
+    char Path[TL_MAX_PATH + 16];
+    int n = (int)::strlen(TList.TagsFilePath);
+    ::memcpy(Path, TList.TagsFilePath, n * sizeof(char));
+    if (Path[n-1] == 's' &&
+        Path[n-2] == 'g' &&
+        Path[n-3] == 'a' &&
+        Path[n-4] == 't' &&
+        Path[n-5] == '\\')
+    {
+      Path[n-5] = '\0';
+    }
+
+    int iLine = atoi(Item->ExtLine);
+    std::string strFileToOpen(Path);
+    strFileToOpen += "\\";
+    strFileToOpen += Item->FileName;
+
+    // open the file for reading
+    std::ifstream file(strFileToOpen.c_str());
+    std::string strFileContent;
+    std::string strTemp;
+
+// TODO:2020-05-20:MVINCENT:RichEdit style for actual line
+/** 
+ *  Add logic to get a few lines before, highlight (bold/ital) the actual
+ *  line and then 10 lines after.
+ */
+
+    // throw away top lines
+    int i;
+    for (i = 1; i < iLine; i++)
+    {
+        std::getline(file, strTemp);
+    }
+    // read and display next 10 lines
+    i = 0;
+    while (std::getline(file, strTemp) && i < 10)
+    {
+        strFileContent += strTemp;
+        strFileContent += "\r\n";
+        i++;
+    }
+    SetWindowTextA(EditHWnd, (LPCSTR)strFileContent.c_str());
+}
+
 LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
   switch (uMsg)
@@ -632,52 +726,7 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
     case WM_TIMER:
     {
         KillTimer( FormHWnd, 1 );
-
-        // Get current list view item (need filename and line number)
-        int idx = ListView_GetNextItem( LViewHWnd, -1, LVIS_FOCUSED );
-        TagList::TagListItem *Item;
-        Item = GetItemData(idx);
-        if (Item == NULL)
-          return FALSE;
-
-        // Get tagsfilepath (which contains the '\tags' filename, so remove it)
-        char Path[TL_MAX_PATH + 16];
-        int n = (int)::strlen(TList.TagsFilePath);
-        ::memcpy(Path, TList.TagsFilePath, n * sizeof(char));
-        if (Path[n-1] == 's' &&
-            Path[n-2] == 'g' &&
-            Path[n-3] == 'a' &&
-            Path[n-4] == 't' &&
-            Path[n-5] == '\\')
-        {
-          Path[n-5] = '\0';
-        }
-
-        int iLine = atoi(Item->ExtLine);
-        std::string strFileToOpen(Path);
-        strFileToOpen += "\\";
-        strFileToOpen += Item->FileName;
-
-        // open the file for reading
-        std::ifstream file(strFileToOpen.c_str());
-        std::string strFileContent;
-        std::string strTemp;
-        // throw away top lines
-        int i;
-        for (i = 1; i < iLine; i++)
-        {
-            std::getline(file, strTemp);
-        }
-        // read and display next 10 lines
-        i = 0;
-        while (std::getline(file, strTemp) && i < 10)
-        {
-            strFileContent += strTemp;
-            strFileContent += "\r\n";
-            i++;
-        }
-        SetWindowTextA(EditHWnd, (LPCSTR)strFileContent.c_str());
-
+        UpdateEditView();
         return FALSE;
     }
 
@@ -782,6 +831,7 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
               if (::GetKeyState(VK_CONTROL) & 0x8000)
               {
                 ResizeListViewFont(1, false);
+                ResizeEditViewFont(1, false);
               }
               else
               {
@@ -792,6 +842,7 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
               if (::GetKeyState(VK_CONTROL) & 0x8000)
               {
                 ResizeListViewFont(-1, false);
+                ResizeEditViewFont(-1, false);
               }
               else
               {
@@ -844,6 +895,7 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
               if (::GetKeyState(VK_CONTROL) & 0x8000)
               {
                 ResizeListViewFont(0, true);
+                ResizeEditViewFont(0, true);
               }
               else
               {

@@ -162,6 +162,12 @@ TagLeetApp::TagLeetApp(const struct NppData *NppDataObj)
     ListViewFontHeight = 20;
   }
   DefaultListViewFontHeight = ListViewFontHeight;
+  EditViewFontHeight = (int)::SendMessage(getCurrScintilla(), SCI_STYLEGETSIZE, 0, 0);
+  if (EditViewFontHeight > 0)
+  {
+    EditViewFontHeight *= 20;
+  }
+  DefaultEditViewFontHeight = EditViewFontHeight;
 
   StatusFont = CreateStatusFont();
   ListViewFont = CreateListViewFont();
@@ -407,6 +413,21 @@ HFONT TagLeetApp::UpdateListViewFont(int change, bool reset)
   }
 
   return ListViewFont;
+}
+
+int TagLeetApp::UpdateEditViewFontHeight(int change, bool reset)
+{
+  int NewFontHeight;
+
+  NewFontHeight = reset ?
+    DefaultEditViewFontHeight : EditViewFontHeight + change*20;
+  if (NewFontHeight < 140 || NewFontHeight > 400)
+  {
+    return EditViewFontHeight;
+  }
+
+  EditViewFontHeight = NewFontHeight;
+  return EditViewFontHeight;
 }
 
 void TagLeetApp::SetInstance(HINSTANCE in_InstanceHndl)
