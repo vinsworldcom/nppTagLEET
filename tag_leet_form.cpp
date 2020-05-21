@@ -17,6 +17,8 @@
     along with TagLEET.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#define SPLITTER_HEIGHT 5
+
 #include "tag_leet_form.h"
 #include "scintilla.h"
 
@@ -174,17 +176,21 @@ void TagLeetForm::OnResize()
   ::GetClientRect(FormHWnd, &Rect);
   StatusHeight = App->GetStatusHeight();
   EditHeight = App->GetEditHeight();
+
   ::SetWindowPos(LViewHWnd, NULL, 0,
-    0, Rect.right, Rect.bottom - StatusHeight - EditHeight,
+    0, Rect.right, Rect.bottom - StatusHeight - EditHeight - SPLITTER_HEIGHT,
     SWP_NOZORDER);
-  FocusIdx = ListView_GetNextItem(LViewHWnd, -1, LVNI_FOCUSED);
-  ListView_EnsureVisible(LViewHWnd, FocusIdx, FALSE);
-  ::SetWindowPos(StatusHWnd, NULL,
-    0, Rect.bottom - StatusHeight, Rect.right, StatusHeight,
-    SWP_NOZORDER);
+
   ::SetWindowPos(EditHWnd, NULL,
     0, Rect.bottom - StatusHeight - EditHeight, Rect.right, EditHeight,
     SWP_NOZORDER);
+
+  ::SetWindowPos(StatusHWnd, NULL,
+    0, Rect.bottom - StatusHeight, Rect.right, StatusHeight,
+    SWP_NOZORDER);
+
+  FocusIdx = ListView_GetNextItem(LViewHWnd, -1, LVNI_FOCUSED);
+  ListView_EnsureVisible(LViewHWnd, FocusIdx, FALSE);
 
   ::GetWindowRect(FormHWnd, &Rect);
   App->SetFormSize(Rect.right - Rect.left, Rect.bottom - Rect.top, false);
@@ -313,9 +319,9 @@ TL_ERR TagLeetForm::CreateListView(HWND hwnd)
   if (StatusHWnd != NULL && StatusFont != NULL)
     ::PostMessage(StatusHWnd, WM_SETFONT, (WPARAM)StatusFont, (LPARAM)0);
 
-  LViewHWnd = ::CreateWindow(WC_LISTVIEW, NULL,
+  LViewHWnd = ::CreateWindowEx(WS_EX_CLIENTEDGE, WC_LISTVIEW, NULL,
     WS_CHILD | LVS_REPORT | LVS_SINGLESEL | WS_VISIBLE,
-    0, 0, Rect.right, Rect.bottom - StatusHeight - EditHeight,
+    0, 0, Rect.right, Rect.bottom - StatusHeight - EditHeight - SPLITTER_HEIGHT,
     hwnd, NULL, App->GetInstance(), NULL);
   if (LViewHWnd == NULL)
     return TL_ERR_GENERAL;
@@ -323,7 +329,7 @@ TL_ERR TagLeetForm::CreateListView(HWND hwnd)
 // TODO:2020-05-19:MVINCENT:add splitter to resize edit and listview controls
 
   LoadLibrary(_T("Riched20.dll"));
-  EditHWnd = ::CreateWindow(RICHEDIT_CLASS, NULL,
+  EditHWnd = ::CreateWindowEx(WS_EX_CLIENTEDGE, RICHEDIT_CLASS, NULL,
     WS_CHILD | WS_VSCROLL | WS_VISIBLE | ES_MULTILINE | ES_READONLY | ES_AUTOHSCROLL | ES_AUTOVSCROLL,
     0, Rect.bottom - StatusHeight - EditHeight, Rect.right, EditHeight,
     hwnd, NULL, App->GetInstance(), NULL);
