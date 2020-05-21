@@ -73,6 +73,16 @@ private:
   void ChangeColors();
   void OnResize();
 
+  LRESULT EditCallBckProcedure(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+  static LRESULT CALLBACK wndDefaultEditProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    return (((TagLeetForm *)(::GetWindowLongPtr(hwnd, GWLP_USERDATA)))->EditCallBckProcedure(hwnd, uMsg, wParam, lParam));
+  };
+
+  LRESULT runSplitterProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+  static LRESULT CALLBACK wndDefaultSplitterProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    return (((TagLeetForm *)(::GetWindowLongPtr(hwnd, GWLP_USERDATA)))->runSplitterProc(hwnd, uMsg, wParam, lParam));
+  };
+
   TagLeetApp *App;
   TagList TList;
   UINT KindToIndex[TAG_KIND_LAST];
@@ -96,8 +106,18 @@ private:
 
   HWND FormHWnd;
   HWND LViewHWnd;
+  HWND SplitterHWnd;
   HWND StatusHWnd;
+
   HWND EditHWnd;
+  WNDPROC _hDefaultEditProc;
+
+  /* splitter values */
+  WNDPROC _hDefaultSplitterProc;
+  POINT   _ptOldPos;
+  POINT   _ptOldPosHorizontal;
+  BOOL    _isLeftButtonDown;
+  int     iSplitterPos;
 };
 
 enum {

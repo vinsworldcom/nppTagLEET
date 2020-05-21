@@ -17,7 +17,7 @@
     along with TagLEET.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#define SPLITTER_HEIGHT 5
+#define SPLITTER_HEIGHT 8
 
 #include "tag_leet_form.h"
 #include "scintilla.h"
@@ -100,6 +100,11 @@ void TagLeetForm::Destroy()
   bool DestroyApp = false;
   TagLeetApp *CurrApp = App;
 
+  if (_hDefaultSplitterProc != nullptr) {
+    ::SetWindowLongPtr(SplitterHWnd, GWLP_WNDPROC, (LONG_PTR)_hDefaultSplitterProc);
+    _hDefaultSplitterProc = nullptr;
+  }
+
   ::SetWindowLongPtr(FormHWnd, 0, (LONG_PTR)NULL);
   CurrApp->Lock();
   CurrApp->DetachForm(this, &DestroyApp);
@@ -169,24 +174,31 @@ TL_ERR TagLeetForm::CreateWnd(TagLookupContext *TLCtx)
 void TagLeetForm::OnResize()
 {
   RECT Rect;
-  int StatusHeight;
-  int EditHeight;
+  int StatusHeight = App->GetStatusHeight();
   int FocusIdx;
+  int splitterPos = iSplitterPos;
 
   ::GetClientRect(FormHWnd, &Rect);
-  StatusHeight = App->GetStatusHeight();
-  EditHeight = App->GetEditHeight();
 
-  ::SetWindowPos(LViewHWnd, NULL, 0,
-    0, Rect.right, Rect.bottom - StatusHeight - EditHeight - SPLITTER_HEIGHT,
-    SWP_NOZORDER);
-
-  ::SetWindowPos(EditHWnd, NULL,
-    0, Rect.bottom - StatusHeight - EditHeight, Rect.right, EditHeight,
-    SWP_NOZORDER);
+  if (splitterPos < 50)
+    splitterPos = 50;
+  else if (splitterPos > (Rect.bottom - 100))
+    splitterPos = Rect.bottom - 100;
 
   ::SetWindowPos(StatusHWnd, NULL,
     0, Rect.bottom - StatusHeight, Rect.right, StatusHeight,
+    SWP_NOZORDER);
+
+  ::SetWindowPos(LViewHWnd, NULL,
+    0, 0, Rect.right, splitterPos,
+    SWP_NOZORDER);
+
+  ::SetWindowPos(SplitterHWnd, NULL,
+    0, splitterPos, Rect.right, SPLITTER_HEIGHT,
+    SWP_NOZORDER);
+
+  ::SetWindowPos(EditHWnd, NULL,
+    0, splitterPos + SPLITTER_HEIGHT, Rect.right, Rect.bottom - StatusHeight - SPLITTER_HEIGHT - splitterPos,
     SWP_NOZORDER);
 
   FocusIdx = ListView_GetNextItem(LViewHWnd, -1, LVNI_FOCUSED);
@@ -195,6 +207,56 @@ void TagLeetForm::OnResize()
   ::GetWindowRect(FormHWnd, &Rect);
   App->SetFormSize(Rect.right - Rect.left, Rect.bottom - Rect.top, false);
   NeedUpdateColumns = true;
+}
+
+LRESULT TagLeetForm::runSplitterProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    switch (uMsg)
+    {
+        case WM_LBUTTONDOWN:
+        {
+            _isLeftButtonDown = TRUE;
+            ::GetCursorPos(&_ptOldPos);
+//            SetCursor(_hSplitterCursorUpDown);
+            break;
+        }
+        case WM_LBUTTONUP:
+        {
+            RECT Rect;
+
+            ::GetClientRect(FormHWnd, &Rect);
+            _isLeftButtonDown = FALSE;
+
+//            SetCursor(_hSplitterCursorUpDown);
+            if (iSplitterPos < 50)
+                iSplitterPos = 50;
+            else if (iSplitterPos > (Rect.bottom - 100))
+                iSplitterPos = Rect.bottom - 100;
+            break;
+        }
+        case WM_MOUSEMOVE:
+        {
+            if (_isLeftButtonDown == TRUE)
+            {
+                POINT pt;
+                ::GetCursorPos(&pt);
+
+                if (_ptOldPos.y != pt.y)
+                {
+                    iSplitterPos -= _ptOldPos.y - pt.y;
+                    ::SendMessage(FormHWnd, WM_SIZE, 0, 0);
+                }
+                _ptOldPos = pt;
+            }
+
+//            SetCursor(_hSplitterCursorUpDown);
+            break;
+        }
+        default:
+            break;
+    }
+
+    return ::CallWindowProc(_hDefaultSplitterProc, hwnd, uMsg, wParam, lParam);
 }
 
 void TagLeetForm::ResizeForm(int change)
@@ -290,6 +352,16 @@ void TagLeetForm::ChangeColors()
     RDW_ERASE  | RDW_INVALIDATE | RDW_ALLCHILDREN);
 }
 
+LRESULT TagLeetForm::EditCallBckProcedure(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    if( (uMsg == WM_CHAR) && (wParam == VK_ESCAPE) )
+    {
+        PostCloseMsg();
+        return 0;
+    }
+    return ::CallWindowProc(_hDefaultEditProc, hwnd, uMsg, wParam, lParam);
+}
+
 /* Called from WM_CREATE message of Form window. Note that at this point
  * CreateWindow of the Form Window has not returned yet so FormHWnd is NULL */
 TL_ERR TagLeetForm::CreateListView(HWND hwnd)
@@ -299,7 +371,6 @@ TL_ERR TagLeetForm::CreateListView(HWND hwnd)
   TL_ERR err = TL_ERR_OK;
   HIMAGELIST hImgList;
   int StatusHeight = App->GetStatusHeight();
-  int EditHeight = App->GetEditHeight();
   HFONT StatusFont = App->GetStatusFont();
   HFONT ListViewFont = App->GetListViewFont();
   int EditViewFontHeight = App->GetEditViewFontHeight();
@@ -312,6 +383,9 @@ TL_ERR TagLeetForm::CreateListView(HWND hwnd)
     return TL_ERR_GENERAL;
 
   ::GetClientRect(hwnd, &Rect);
+  int EditHeight  = ( Rect.bottom - StatusHeight - SPLITTER_HEIGHT ) / 2;
+  int LViewHeight = Rect.bottom - StatusHeight - SPLITTER_HEIGHT - EditHeight;
+
   StatusHWnd = ::CreateWindowEx(WS_EX_CLIENTEDGE, TEXT("EDIT"), NULL,
     WS_CHILD | WS_VISIBLE | ES_READONLY,
     0, Rect.bottom - StatusHeight, Rect.right, StatusHeight,
@@ -321,12 +395,20 @@ TL_ERR TagLeetForm::CreateListView(HWND hwnd)
 
   LViewHWnd = ::CreateWindowEx(WS_EX_CLIENTEDGE, WC_LISTVIEW, NULL,
     WS_CHILD | LVS_REPORT | LVS_SINGLESEL | WS_VISIBLE,
-    0, 0, Rect.right, Rect.bottom - StatusHeight - EditHeight - SPLITTER_HEIGHT,
+    0, 0, Rect.right, LViewHeight,
     hwnd, NULL, App->GetInstance(), NULL);
   if (LViewHWnd == NULL)
     return TL_ERR_GENERAL;
 
-// TODO:2020-05-19:MVINCENT:add splitter to resize edit and listview controls
+  SplitterHWnd = ::CreateWindow(TEXT("BUTTON"), TEXT(""),
+    WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
+    0, Rect.bottom - StatusHeight - EditHeight - SPLITTER_HEIGHT, Rect.right, SPLITTER_HEIGHT,
+    hwnd, NULL, App->GetInstance(), NULL);
+  if (SplitterHWnd == NULL)
+    return TL_ERR_GENERAL;
+  ::SetWindowLongPtr(SplitterHWnd, GWLP_USERDATA, (LONG_PTR)this);
+  _hDefaultSplitterProc = (WNDPROC)::SetWindowLongPtr(SplitterHWnd, GWLP_WNDPROC, (LONG_PTR)wndDefaultSplitterProc);
+  iSplitterPos = LViewHeight;
 
   LoadLibrary(_T("Riched20.dll"));
   EditHWnd = ::CreateWindowEx(WS_EX_CLIENTEDGE, RICHEDIT_CLASS, NULL,
@@ -335,6 +417,8 @@ TL_ERR TagLeetForm::CreateListView(HWND hwnd)
     hwnd, NULL, App->GetInstance(), NULL);
   if (EditHWnd == NULL)
     return TL_ERR_GENERAL;
+  ::SetWindowLongPtr(EditHWnd, GWLP_USERDATA, (LONG_PTR)this);
+  _hDefaultEditProc = (WNDPROC)::SetWindowLongPtr(EditHWnd, GWLP_WNDPROC, (LONG_PTR)wndDefaultEditProc);
 
   ListView_SetImageList(LViewHWnd, hImgList, LVSIL_SMALL);
   HdrHndl = ListView_GetHeader(LViewHWnd);
@@ -767,13 +851,32 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
         return FALSE;
     }
 
+    case WM_DRAWITEM:
+    {
+        DRAWITEMSTRUCT* pDrawItemStruct = (DRAWITEMSTRUCT *)lParam;
+    
+        if (pDrawItemStruct->hwndItem == SplitterHWnd)
+        {
+            RECT   rc      = pDrawItemStruct->rcItem;
+            HDC    hDc     = pDrawItemStruct->hDC;
+            HBRUSH bgbrush = ::CreateSolidBrush(::GetSysColor(COLOR_BTNFACE));
+    
+            /* fill background */
+            ::FillRect(hDc, &rc, bgbrush);
+    
+            ::DeleteObject(bgbrush);
+            return TRUE;
+        }
+        break;
+    }
+
     case WM_NOTIFY:
     {
       LPNMHDR pnmh = (LPNMHDR)lParam;
       switch (pnmh->code)
       {
         case NM_KILLFOCUS:
-          if (GetFocus() != EditHWnd)
+          if (GetFocus() != EditHWnd && GetFocus() != SplitterHWnd)
             PostCloseMsg();
           return 0;
         case NM_DBLCLK:
