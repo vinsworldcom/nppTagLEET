@@ -64,78 +64,74 @@ int  g_PeekPost     = 9;
 
 static int __stdcall BrowseCallbackProc(HWND hwnd, UINT uMsg, LPARAM, LPARAM pData)
 {
-    if (uMsg == BFFM_INITIALIZED)
-        ::SendMessage(hwnd, BFFM_SETSELECTION, TRUE, pData);
-    return 0;
+  if (uMsg == BFFM_INITIALIZED)
+    ::SendMessage(hwnd, BFFM_SETSELECTION, TRUE, pData);
+  return 0;
 }
 
 void CreateTagsDb(HWND NppHndl, NppCallContext *NppC, char *TagsFilePath)
 {
-    char moduleFileName[MAX_PATH];
-    GetModuleFileNameA((HMODULE)NppC->App->GetInstance(), moduleFileName, MAX_PATH);
+  char moduleFileName[MAX_PATH];
+  GetModuleFileNameA((HMODULE)NppC->App->GetInstance(), moduleFileName, MAX_PATH);
 
-    std::string strModuleFileName(moduleFileName);
-    size_t lastindex = strModuleFileName.find_last_of(".");
-    strModuleFileName = strModuleFileName.substr(0, lastindex);
-    strModuleFileName += "\\ctags.exe";
+  std::string strModuleFileName(moduleFileName);
+  size_t lastindex = strModuleFileName.find_last_of(".");
+  strModuleFileName = strModuleFileName.substr(0, lastindex);
+  strModuleFileName += "\\ctags.exe";
 
-    int ret = (int)::ShellExecuteA(NppHndl, "open", strModuleFileName.c_str(), "--extra=fq --fields=+n --file-scope=yes -R", TagsFilePath, SW_HIDE);
-    if (ret <= 32 )
-    {
-        if (ret == ERROR_FILE_NOT_FOUND)
-        {
-            MessageBoxA(NppHndl, strModuleFileName.c_str(), "File Not Found", MB_OK | MB_ICONEXCLAMATION);
-        }
-        else
-        {
-            MessageBoxA(NppHndl, "Cannot generate ctags database", "Unknown error", MB_OK | MB_ICONEXCLAMATION);
-        }
-    }
+  int ret = (int)::ShellExecuteA(NppHndl, "open", strModuleFileName.c_str(), "--extra=fq --fields=+n --file-scope=yes -R", TagsFilePath, SW_HIDE);
+  if (ret <= 32 )
+  {
+    if (ret == ERROR_FILE_NOT_FOUND)
+      MessageBoxA(NppHndl, strModuleFileName.c_str(), "File Not Found", MB_OK | MB_ICONEXCLAMATION);
+    else
+      MessageBoxA(NppHndl, "Cannot generate ctags database", "Unknown error", MB_OK | MB_ICONEXCLAMATION);
+  }
 }
 
 void SetTagsFilePath(HWND NppHndl, NppCallContext *NppC, char *TagsFilePath)
 {
-    TCHAR Msg[2048];
+  TCHAR Msg[2048];
 
-    ::_sntprintf(Msg, ARRAY_SIZE(Msg),
-      TEXT("'tags' file not found on path of:\n%s\n\nCreate?"), NppC->Path);
-    int response = ::MessageBox(NppHndl, Msg, TEXT("TagLEET"), MB_YESNO | MB_ICONWARNING);
-    if (response == IDYES)
+  ::_sntprintf(Msg, ARRAY_SIZE(Msg),
+    TEXT("'tags' file not found on path of:\n%s\n\nCreate?"), NppC->Path);
+  int response = ::MessageBox(NppHndl, Msg, TEXT("TagLEET"), MB_YESNO | MB_ICONWARNING);
+  if (response == IDYES)
+  {
+    LPMALLOC pShellMalloc = 0;
+    if (::SHGetMalloc(&pShellMalloc) == NO_ERROR)
     {
-        LPMALLOC pShellMalloc = 0;
-        if (::SHGetMalloc(&pShellMalloc) == NO_ERROR)
-        {
-            // If we were able to get the shell malloc object,
-            // then proceed by initializing the BROWSEINFO stuct
-            BROWSEINFO info;
-            ZeroMemory(&info, sizeof(info));
-            info.hwndOwner          = NppHndl;
-            info.pidlRoot           = NULL;
-            info.pszDisplayName     = (LPTSTR)new TCHAR[MAX_PATH];
-            info.lpszTitle          = TEXT( "CTags root directory (indexed recursively)" );
-            info.ulFlags            = BIF_RETURNONLYFSDIRS | BIF_USENEWUI | BIF_NONEWFOLDERBUTTON;
-            info.lpfn               = BrowseCallbackProc;
-            info.lParam             = (LPARAM)TagsFilePath;
+      // If we were able to get the shell malloc object,
+      // then proceed by initializing the BROWSEINFO stuct
+      BROWSEINFO info;
+      ZeroMemory(&info, sizeof(info));
+      info.hwndOwner      = NppHndl;
+      info.pidlRoot       = NULL;
+      info.pszDisplayName = (LPTSTR)new TCHAR[MAX_PATH];
+      info.lpszTitle      = TEXT( "CTags root directory (indexed recursively)" );
+      info.ulFlags        = BIF_RETURNONLYFSDIRS | BIF_USENEWUI | BIF_NONEWFOLDERBUTTON;
+      info.lpfn           = BrowseCallbackProc;
+      info.lParam         = (LPARAM)TagsFilePath;
 
-            ::SendMessage(NppHndl, NPPM_GETCURRENTDIRECTORY, MAX_PATH, (LPARAM)TagsFilePath);
+      ::SendMessage(NppHndl, NPPM_GETCURRENTDIRECTORY, MAX_PATH, (LPARAM)TagsFilePath);
 
-            // Execute the browsing dialog.
-            LPITEMIDLIST pidl = ::SHBrowseForFolder(&info);
+      // Execute the browsing dialog.
+      LPITEMIDLIST pidl = ::SHBrowseForFolder(&info);
 
-            // pidl will be null if they cancel the browse dialog.
-            // pidl will be not null when they select a folder.
-            if (pidl)
-            {
-                ::SHGetPathFromIDListA( pidl, TagsFilePath );
-                CreateTagsDb(NppHndl, NppC, TagsFilePath);
+      // pidl will be null if they cancel the browse dialog.
+      // pidl will be not null when they select a folder.
+      if (pidl)
+      {
+        ::SHGetPathFromIDListA( pidl, TagsFilePath );
+        CreateTagsDb(NppHndl, NppC, TagsFilePath);
 
-                pShellMalloc->Free(pidl);
-            }
-            pShellMalloc->Release();
-            delete [] info.pszDisplayName;
-        }
+        pShellMalloc->Free(pidl);
+      }
+      pShellMalloc->Release();
+      delete [] info.pszDisplayName;
     }
-    return;
+  }
+  return;
 }
 
 TagLeetApp::TagLeetApp(const struct NppData *NppDataObj)
@@ -162,15 +158,12 @@ TagLeetApp::TagLeetApp(const struct NppData *NppDataObj)
 
   ListViewFontHeight = GetScreenHeight() / 60;
   if (ListViewFontHeight < 20)
-  {
     ListViewFontHeight = 20;
-  }
   DefaultListViewFontHeight = ListViewFontHeight;
+
   EditViewFontHeight = (int)::SendMessage(getCurrScintilla(), SCI_STYLEGETSIZE, 0, 0);
   if (EditViewFontHeight > 0)
-  {
     EditViewFontHeight *= 20;
-  }
   DefaultEditViewFontHeight = EditViewFontHeight;
 
   StatusFont = CreateStatusFont();
@@ -240,16 +233,15 @@ void TagLeetApp::Shutdown()
                                g_useNppAutoC ? TEXT( "1" ) : TEXT( "0" ), iniFilePath );
   ::WritePrivateProfileString( sectionName, iniUpdateOnSave,
                                g_UpdateOnSave ? TEXT( "1" ) : TEXT( "0" ), iniFilePath );
-   _itot_s( g_PeekPre, buf, 64, 10 );
+  _itot_s( g_PeekPre, buf, 64, 10 );
   ::WritePrivateProfileString( sectionName, iniPeekPre, buf, iniFilePath );
-   _itot_s( g_PeekPost, buf, 64, 10 );
+  _itot_s( g_PeekPost, buf, 64, 10 );
   ::WritePrivateProfileString( sectionName, iniPeekPost, buf, iniFilePath );
 
   delete this;
 }
 
-void TagLeetApp::GetFormSize(unsigned int *Width,
-  unsigned int *Height)
+void TagLeetApp::GetFormSize(unsigned int *Width, unsigned int *Height)
 {
   if (HeightWidthValid) {
     *Width = FormWidth * FormScale / 100;
@@ -285,8 +277,7 @@ void TagLeetApp::GetFormSize(unsigned int *Width,
   *Height = CurrHeight * FormScale / 100;
 }
 
-void TagLeetApp::SetFormSize(unsigned int Width,
-  unsigned int Height, bool reset)
+void TagLeetApp::SetFormSize(unsigned int Width, unsigned int Height, bool reset)
 {
   if (reset)
   {
@@ -409,9 +400,7 @@ HFONT TagLeetApp::UpdateListViewFont(int change, bool reset)
   NewFontHeight = reset ?
     DefaultListViewFontHeight : ListViewFontHeight + change;
   if (NewFontHeight < 14 || NewFontHeight > 40)
-  {
     return ListViewFont;
-  }
 
   ListViewFontHeight = NewFontHeight;
   ListViewFont = CreateListViewFont();
@@ -436,9 +425,7 @@ int TagLeetApp::UpdateEditViewFontHeight(int change, bool reset)
   NewFontHeight = reset ?
     DefaultEditViewFontHeight : EditViewFontHeight + change*20;
   if (NewFontHeight < 140 || NewFontHeight > 400)
-  {
     return EditViewFontHeight;
-  }
 
   EditViewFontHeight = NewFontHeight;
   return EditViewFontHeight;
@@ -504,6 +491,7 @@ TL_ERR TagLeetApp::GetTagsFilePath(NppCallContext *NppC, char *TagFileBuff,
   return TL_ERR_NOT_EXIST;
   // /* Failed to find a tag file on the path. Try using the last tag file we
    // * found. */
+// 2020-05-21:MVINCENT: Actually, do not do this, prompt for create instead
   // err = LastTagFileGet(Path, ARRAY_SIZE(Path));
   // if (err)
     // return err;

@@ -99,16 +99,16 @@ extern "C" __declspec(dllexport) FuncItem * getFuncsArray(int *nbF)
 
 extern "C" __declspec(dllexport) void beNotified(SCNotification *notifyCode)
 {
-    switch (notifyCode->nmhdr.code)
-    {
-        case NPPN_FILESAVED:
-            if (TheApp != NULL)
-              TheApp->UpdateTagDb();
-            break;
-
-        default:
-            return;
-    }
+  switch (notifyCode->nmhdr.code)
+  {
+    case NPPN_FILESAVED:
+      if (TheApp != NULL)
+        TheApp->UpdateTagDb();
+      break;
+ 
+    default:
+      return;
+  }
 }
 
 extern "C" __declspec(dllexport) LRESULT messageProc(UINT, WPARAM, LPARAM)

@@ -73,14 +73,14 @@ private:
   void ChangeColors();
   void OnResize();
 
-  LRESULT EditCallBckProcedure(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+  LRESULT editWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
   static LRESULT CALLBACK wndDefaultEditProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    return (((TagLeetForm *)(::GetWindowLongPtr(hwnd, GWLP_USERDATA)))->EditCallBckProcedure(hwnd, uMsg, wParam, lParam));
+    return (((TagLeetForm *)(::GetWindowLongPtr(hwnd, GWLP_USERDATA)))->editWndProc(hwnd, uMsg, wParam, lParam));
   };
 
-  LRESULT runSplitterProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+  LRESULT splitterWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
   static LRESULT CALLBACK wndDefaultSplitterProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    return (((TagLeetForm *)(::GetWindowLongPtr(hwnd, GWLP_USERDATA)))->runSplitterProc(hwnd, uMsg, wParam, lParam));
+    return (((TagLeetForm *)(::GetWindowLongPtr(hwnd, GWLP_USERDATA)))->splitterWndProc(hwnd, uMsg, wParam, lParam));
   };
 
   TagLeetApp *App;

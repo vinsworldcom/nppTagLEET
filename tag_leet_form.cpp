@@ -105,6 +105,11 @@ void TagLeetForm::Destroy()
     _hDefaultSplitterProc = nullptr;
   }
 
+  if (_hDefaultEditProc != nullptr) {
+    ::SetWindowLongPtr(EditHWnd, GWLP_WNDPROC, (LONG_PTR)_hDefaultEditProc);
+    _hDefaultEditProc = nullptr;
+  }
+
   ::SetWindowLongPtr(FormHWnd, 0, (LONG_PTR)NULL);
   CurrApp->Lock();
   CurrApp->DetachForm(this, &DestroyApp);
@@ -209,56 +214,6 @@ void TagLeetForm::OnResize()
   NeedUpdateColumns = true;
 }
 
-LRESULT TagLeetForm::runSplitterProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-    switch (uMsg)
-    {
-        case WM_LBUTTONDOWN:
-        {
-            _isLeftButtonDown = TRUE;
-            ::GetCursorPos(&_ptOldPos);
-//            SetCursor(_hSplitterCursorUpDown);
-            break;
-        }
-        case WM_LBUTTONUP:
-        {
-            RECT Rect;
-
-            ::GetClientRect(FormHWnd, &Rect);
-            _isLeftButtonDown = FALSE;
-
-//            SetCursor(_hSplitterCursorUpDown);
-            if (iSplitterPos < 50)
-                iSplitterPos = 50;
-            else if (iSplitterPos > (Rect.bottom - 100))
-                iSplitterPos = Rect.bottom - 100;
-            break;
-        }
-        case WM_MOUSEMOVE:
-        {
-            if (_isLeftButtonDown == TRUE)
-            {
-                POINT pt;
-                ::GetCursorPos(&pt);
-
-                if (_ptOldPos.y != pt.y)
-                {
-                    iSplitterPos -= _ptOldPos.y - pt.y;
-                    ::SendMessage(FormHWnd, WM_SIZE, 0, 0);
-                }
-                _ptOldPos = pt;
-            }
-
-//            SetCursor(_hSplitterCursorUpDown);
-            break;
-        }
-        default:
-            break;
-    }
-
-    return ::CallWindowProc(_hDefaultSplitterProc, hwnd, uMsg, wParam, lParam);
-}
-
 void TagLeetForm::ResizeForm(int change)
 {
   NppCallContext NppC(App);
@@ -350,16 +305,6 @@ void TagLeetForm::ChangeColors()
   ::SendMessage(EditHWnd, WM_SETREDRAW, TRUE, 0);
   ::RedrawWindow(EditHWnd, NULL, NULL,
     RDW_ERASE  | RDW_INVALIDATE | RDW_ALLCHILDREN);
-}
-
-LRESULT TagLeetForm::EditCallBckProcedure(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-    if( (uMsg == WM_CHAR) && (wParam == VK_ESCAPE) )
-    {
-        PostCloseMsg();
-        return 0;
-    }
-    return ::CallWindowProc(_hDefaultEditProc, hwnd, uMsg, wParam, lParam);
 }
 
 /* Called from WM_CREATE message of Form window. Note that at this point
@@ -816,6 +761,72 @@ void TagLeetForm::UpdateEditView()
     SendMessage(EditHWnd, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM) &charFormat);
 }
 
+LRESULT TagLeetForm::editWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+  switch (uMsg)
+  {
+    case WM_CHAR:
+      if (wParam == VK_ESCAPE)
+      {
+        PostCloseMsg();
+        return 0;
+      }
+      break;
+  }
+  return ::CallWindowProc(_hDefaultEditProc, hwnd, uMsg, wParam, lParam);
+}
+
+LRESULT TagLeetForm::splitterWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+  switch (uMsg)
+  {
+    case WM_LBUTTONDOWN:
+    {
+      _isLeftButtonDown = TRUE;
+      ::GetCursorPos(&_ptOldPos);
+//      SetCursor(_hSplitterCursorUpDown);
+      break;
+    }
+ 
+    case WM_LBUTTONUP:
+    {
+      RECT Rect;
+
+      ::GetClientRect(FormHWnd, &Rect);
+      _isLeftButtonDown = FALSE;
+
+//      SetCursor(_hSplitterCursorUpDown);
+      if (iSplitterPos < 50)
+        iSplitterPos = 50;
+      else if (iSplitterPos > (Rect.bottom - 100))
+        iSplitterPos = Rect.bottom - 100;
+      break;
+    }
+    case WM_MOUSEMOVE:
+    {
+      if (_isLeftButtonDown == TRUE)
+      {
+        POINT pt;
+        ::GetCursorPos(&pt);
+      
+        if (_ptOldPos.y != pt.y)
+        {
+          iSplitterPos -= _ptOldPos.y - pt.y;
+          ::SendMessage(FormHWnd, WM_SIZE, 0, 0);
+        }
+        _ptOldPos = pt;
+      }
+    
+//      SetCursor(_hSplitterCursorUpDown);
+      break;
+    }
+
+    default:
+        break;
+  }
+  return ::CallWindowProc(_hDefaultSplitterProc, hwnd, uMsg, wParam, lParam);
+}
+
 LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
   switch (uMsg)
@@ -1103,7 +1114,7 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 
 void TagLeetForm::UpdateStatusText(std::wstring message)
 {
-    ::SetWindowText(StatusHWnd, message.c_str());
+  ::SetWindowText(StatusHWnd, message.c_str());
 }
 
 void TagLeetForm::UpdateStatusLine(int FocusIdx)
@@ -1164,12 +1175,12 @@ void TagLeetForm::SetItemText(int ColumnIdx, int SubItem, const char *Str,
 
 void TagLeetForm::setDoPrefixMatch()
 {
-    DoPrefixMatch = true;
+  DoPrefixMatch = true;
 }
 
 void TagLeetForm::setDoAutoComplete()
 {
-    DoAutoComplete = true;
+  DoAutoComplete = true;
 }
 
 void TagLeetForm::RefreshList(TagLookupContext *TLCtx)
@@ -1436,4 +1447,3 @@ TL_ERR TagLeetForm::OpenTagLoc(TagList::TagListItem *Item)
   App->GoToFileLine(&TagLoc, Item->Tag);
   return TL_ERR_OK;
 }
-
