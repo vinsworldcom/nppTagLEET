@@ -187,7 +187,7 @@ void TagLeetForm::OnResize()
 
   if (splitterPos < 50)
     splitterPos = 50;
-  else if (splitterPos > (Rect.bottom - 100))
+  else if (splitterPos > (Rect.bottom - 100) && !DoAutoComplete)
     splitterPos = Rect.bottom - 100;
 
   ::SetWindowPos(StatusHWnd, NULL,
@@ -321,6 +321,8 @@ TL_ERR TagLeetForm::CreateListView(HWND hwnd)
   int EditViewFontHeight = App->GetEditViewFontHeight();
   LVCOLUMN LvCol;
   HWND HdrHndl;
+  int EditHeight;
+  int LViewHeight;
 
   hImgList = ImageList_LoadImage(App->GetInstance(),
     MAKEINTRESOURCE(IDR_ICONS),16,0,CLR_DEFAULT,IMAGE_BITMAP,LR_DEFAULTCOLOR);
@@ -328,8 +330,11 @@ TL_ERR TagLeetForm::CreateListView(HWND hwnd)
     return TL_ERR_GENERAL;
 
   ::GetClientRect(hwnd, &Rect);
-  int EditHeight  = ( Rect.bottom - StatusHeight - SPLITTER_HEIGHT ) / 2;
-  int LViewHeight = Rect.bottom - StatusHeight - SPLITTER_HEIGHT - EditHeight;
+  if (DoAutoComplete)
+    EditHeight = 0;
+  else
+    EditHeight  = ( Rect.bottom - StatusHeight - SPLITTER_HEIGHT ) / 2;
+  LViewHeight = Rect.bottom - StatusHeight - SPLITTER_HEIGHT - EditHeight;
 
   StatusHWnd = ::CreateWindowEx(WS_EX_CLIENTEDGE, TEXT("EDIT"), NULL,
     WS_CHILD | WS_VISIBLE | ES_READONLY,
@@ -798,7 +803,7 @@ LRESULT TagLeetForm::splitterWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
 //      SetCursor(_hSplitterCursorUpDown);
       if (iSplitterPos < 50)
         iSplitterPos = 50;
-      else if (iSplitterPos > (Rect.bottom - 100))
+      else if (iSplitterPos > (Rect.bottom - 100) && !DoAutoComplete)
         iSplitterPos = Rect.bottom - 100;
       break;
     }
