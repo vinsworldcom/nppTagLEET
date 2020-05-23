@@ -109,6 +109,7 @@ public:
   void GoBack();
   void GoForward();
   void AutoComplete();
+  void FindRefs();
   void UpdateTagDb();
   void Lock();
   void Unlock();

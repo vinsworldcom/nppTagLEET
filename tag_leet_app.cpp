@@ -665,6 +665,36 @@ void TagLeetApp::UpdateTagDb()
   }
 }
 
+void TagLeetApp::FindRefs()
+{
+  TL_ERR err;
+  NppCallContext NppC(this);
+  char TagsFilePath[TL_MAX_PATH];
+
+  err = GetTagsFilePath(&NppC, TagsFilePath, sizeof(TagsFilePath));
+  if (err)
+    return;
+
+  char Path[TL_MAX_PATH + 16];
+  int n = (int)::strlen(TagsFilePath);
+  ::memcpy(Path, TagsFilePath, n * sizeof(char));
+
+  if (Path[n-1] == 's' &&
+      Path[n-2] == 'g' &&
+      Path[n-3] == 'a' &&
+      Path[n-4] == 't' &&
+      Path[n-5] == '\\')
+  {
+    Path[n-5] = '\0';
+    size_t newsize = strlen(Path) + 1;
+    TCHAR *wPath = new wchar_t[newsize];
+    size_t convertedChars = 0;
+    mbstowcs_s(&convertedChars, wPath, newsize, Path, _TRUNCATE);
+    ::SendMessage(NppHndl, NPPM_LAUNCHFINDINFILESDLG, (WPARAM)wPath, NULL);
+    delete wPath;
+  }
+}
+
 void TagLeetApp::AutoComplete()
 {
   TL_ERR err;
