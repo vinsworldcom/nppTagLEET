@@ -40,9 +40,11 @@ using namespace TagLEET_NPP;
 
 static TCHAR AboutText[] =
   TEXT("TagLEET - ctags plugin for Notepad++\n")
-  TEXT("Version: ") TEXT(VERSION_TAGLEET) TEXT("\n\n")
+  TEXT("Version: 1.3.2.0\n\n")
   TEXT("Copyright 2014-2018 by Gur Stavi\n")
-  TEXT("gur.stavi@gmail.com");
+  TEXT("gur.stavi@gmail.com")
+  TEXT("\n\n----\n\nVersion: ") TEXT(VERSION_TAGLEET) TEXT("\n\n")
+  TEXT("2019-2020 by VinsWorldcom");
 
 const TCHAR TagLeetApp::WindowClassName[] = TEXT("TagLEET-form");
 const uint8_t TagLeetApp::TestEolArr[2] = {10, 13};
