@@ -109,6 +109,8 @@ public:
   void GoBack();
   void GoForward();
   void AutoComplete();
+  void FindRefs();
+  void UpdateTagDb();
   void Lock();
   void Unlock();
   TL_ERR GoToFileLine(const NppLoc *Loc, const char *Tag = NULL);
@@ -118,6 +120,7 @@ public:
   HWND getCurrScintilla();
   HFONT GetStatusFont() const { return StatusFont; }
   HFONT GetListViewFont() const { return ListViewFont; }
+  int GetEditViewFontHeight() const { return EditViewFontHeight; }
   int GetStatusHeight() const { return StatusHeight; }
   void Shutdown();
   TL_ERR GetTagsFilePath(NppCallContext *NppC, char *TagFileBuff, int BuffSize);
@@ -127,6 +130,7 @@ public:
   void UpdateFormScale(int change);
 
   HFONT UpdateListViewFont(int change, bool reset);
+  int UpdateEditViewFontHeight(int change, bool reset);
 
   static void SetInstance(HINSTANCE in_InstanceHndl);
 
@@ -164,6 +168,8 @@ private:
   unsigned int ListViewFontHeight;
   unsigned int DefaultListViewFontHeight;
   HFONT ListViewFont;
+  int EditViewFontHeight;
+  int DefaultEditViewFontHeight;
   bool DestroyOnDetachForm;
   TCHAR LastTagFile[TL_MAX_PATH];
 public:
