@@ -34,6 +34,7 @@ static TagLeetApp *TheApp = NULL;
 HINSTANCE TagLeetApp::InstanceHndl = NULL;
 
 static void NppLookupTag();
+static void NppFindRefs();
 static void NppGoBack();
 static void NppGoForward();
 static void NppAutoComplete();
@@ -87,11 +88,12 @@ extern "C" __declspec(dllexport) FuncItem * getFuncsArray(int *nbF)
     {false, true, false, VK_LEFT},
     {false, true, false, VK_RIGHT}};
   static struct FuncItem TagLeetFuncs[] = {
-    {_T("Lookup Tag"),   NppLookupTag,    0, false, TagLeetShortcuts},
-    {_T("Back"),         NppGoBack,       0, false, TagLeetShortcuts + 1},
-    {_T("Forward"),      NppGoForward,    0, false, TagLeetShortcuts + 2},
-    {_T("Autocomplete"), NppAutoComplete, 0, false, NULL},
-    {_T("About"),        TagLeetAbout,    0, false, NULL}};
+    {_T("Lookup Tag"),      NppLookupTag,    0, false, TagLeetShortcuts},
+    {_T("Find References"), NppFindRefs,     0, false, NULL},
+    {_T("Back"),            NppGoBack,       0, false, TagLeetShortcuts + 1},
+    {_T("Forward"),         NppGoForward,    0, false, TagLeetShortcuts + 2},
+    {_T("Autocomplete"),    NppAutoComplete, 0, false, NULL},
+    {_T("About"),           TagLeetAbout,    0, false, NULL}};
 
   *nbF = ARRAY_SIZE(TagLeetFuncs);
   return TagLeetFuncs;
@@ -99,16 +101,16 @@ extern "C" __declspec(dllexport) FuncItem * getFuncsArray(int *nbF)
 
 extern "C" __declspec(dllexport) void beNotified(SCNotification *notifyCode)
 {
-    switch (notifyCode->nmhdr.code)
-    {
-        case NPPN_FILESAVED:
-            if (TheApp != NULL)
-              TheApp->UpdateTagDb();
-            break;
-
-        default:
-            return;
-    }
+  switch (notifyCode->nmhdr.code)
+  {
+    case NPPN_FILESAVED:
+      if (TheApp != NULL)
+        TheApp->UpdateTagDb();
+      break;
+ 
+    default:
+      return;
+  }
 }
 
 extern "C" __declspec(dllexport) LRESULT messageProc(UINT, WPARAM, LPARAM)
@@ -124,6 +126,12 @@ static void NppLookupTag()
 {
   if (TheApp != NULL)
     TheApp->LookupTag();
+}
+
+static void NppFindRefs()
+{
+  if (TheApp != NULL)
+    TheApp->FindRefs();
 }
 
 static void NppGoForward()

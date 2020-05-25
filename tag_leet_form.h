@@ -59,6 +59,7 @@ private:
   LRESULT WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
   TagList::TagListItem *GetItemData(int ItemIdx);
   TL_ERR OpenTagLoc(TagList::TagListItem *Item);
+  void UpdateEditView();
   void UpdateStatusText(std::wstring message);
   void UpdateStatusLine(int FocusIdx);
   static int CALLBACK LvSortFunc(LPARAM Item1Ptr, LPARAM Item2Ptr,
@@ -66,10 +67,21 @@ private:
   void SetColumnSortArrow(int ColumnIdx, bool Show, bool Down=false);
   void ResizeForm(int change);
   void ResizeListViewFont(int change, bool reset);
+  void ResizeEditViewFont(int change, bool reset);
   void SetNppColors();
   void SetSysColors();
   void ChangeColors();
   void OnResize();
+
+  LRESULT editWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+  static LRESULT CALLBACK wndDefaultEditProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    return (((TagLeetForm *)(::GetWindowLongPtr(hwnd, GWLP_USERDATA)))->editWndProc(hwnd, uMsg, wParam, lParam));
+  };
+
+  LRESULT splitterWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+  static LRESULT CALLBACK wndDefaultSplitterProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    return (((TagLeetForm *)(::GetWindowLongPtr(hwnd, GWLP_USERDATA)))->splitterWndProc(hwnd, uMsg, wParam, lParam));
+  };
 
   TagLeetApp *App;
   TagList TList;
@@ -94,7 +106,18 @@ private:
 
   HWND FormHWnd;
   HWND LViewHWnd;
+  HWND SplitterHWnd;
   HWND StatusHWnd;
+
+  HWND EditHWnd;
+  WNDPROC _hDefaultEditProc;
+
+  /* splitter values */
+  WNDPROC _hDefaultSplitterProc;
+  POINT   _ptOldPos;
+  POINT   _ptOldPosHorizontal;
+  BOOL    _isLeftButtonDown;
+  int     iSplitterPos;
 };
 
 enum {
