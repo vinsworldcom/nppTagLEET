@@ -189,6 +189,8 @@ void TagLeetForm::OnResize()
     splitterPos = 50;
   else if (splitterPos > (Rect.bottom - 100) && !DoAutoComplete)
     splitterPos = Rect.bottom - 100;
+  else if (splitterPos > (Rect.bottom - StatusHeight - SPLITTER_HEIGHT))
+    splitterPos = Rect.bottom - StatusHeight - SPLITTER_HEIGHT;
 
   ::SetWindowPos(StatusHWnd, NULL,
     0, Rect.bottom - StatusHeight, Rect.right, StatusHeight,

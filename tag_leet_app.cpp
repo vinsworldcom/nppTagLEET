@@ -92,7 +92,7 @@ void CreateTagsDb(HWND NppHndl, NppCallContext *NppC, char *TagsFilePath)
   ShExecInfo.lpParameters = strArgs.c_str();
   ShExecInfo.lpDirectory = TagsFilePath;
   ShExecInfo.nShow = SW_HIDE;
-  ShExecInfo.hInstApp = NULL; 
+  ShExecInfo.hInstApp = NULL;
   ShellExecuteExA(&ShExecInfo);
   WaitForSingleObject(ShExecInfo.hProcess,5000);
   GetExitCodeProcess(ShExecInfo.hProcess, &err);
