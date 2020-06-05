@@ -80,14 +80,32 @@ void CreateTagsDb(HWND NppHndl, NppCallContext *NppC, char *TagsFilePath)
   size_t lastindex = strModuleFileName.find_last_of(".");
   strModuleFileName = strModuleFileName.substr(0, lastindex);
   strModuleFileName += "\\ctags.exe";
+  std::string strArgs = "--extra=fq --fields=+n --file-scope=yes -R";
 
-  int ret = (int)::ShellExecuteA(NppHndl, "open", strModuleFileName.c_str(), "--extra=fq --fields=+n --file-scope=yes -R", TagsFilePath, SW_HIDE);
-  if (ret <= 32 )
+  DWORD err;
+  SHELLEXECUTEINFOA ShExecInfo = {0};
+  ShExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
+  ShExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
+  ShExecInfo.hwnd = NULL;
+  ShExecInfo.lpVerb = NULL;
+  ShExecInfo.lpFile = strModuleFileName.c_str();
+  ShExecInfo.lpParameters = strArgs.c_str();
+  ShExecInfo.lpDirectory = TagsFilePath;
+  ShExecInfo.nShow = SW_HIDE;
+  ShExecInfo.hInstApp = NULL; 
+  ShellExecuteExA(&ShExecInfo);
+  WaitForSingleObject(ShExecInfo.hProcess,5000);
+  GetExitCodeProcess(ShExecInfo.hProcess, &err);
+  if ( err != 0 )
   {
-    if (ret == ERROR_FILE_NOT_FOUND)
-      MessageBoxA(NppHndl, strModuleFileName.c_str(), "File Not Found", MB_OK | MB_ICONEXCLAMATION);
-    else
-      MessageBoxA(NppHndl, "Cannot generate ctags database", "Unknown error", MB_OK | MB_ICONEXCLAMATION);
+      std::string errMsg;
+      errMsg = strModuleFileName;
+      errMsg += " ";
+      errMsg += strArgs;
+      errMsg += " ";
+      errMsg += TagsFilePath;
+      errMsg += "\\tags";
+      MessageBoxA(NppHndl, errMsg.c_str(), "Cannot generate ctags database", MB_OK | MB_ICONEXCLAMATION);
   }
 }
 
