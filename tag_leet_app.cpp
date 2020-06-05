@@ -523,7 +523,10 @@ void TagLeetApp::LookupTag()
   }
 
   TagLookupContext TLCtx(&NppC, TagsFilePath);
+
   /* Test that word is valid */
+  if ( TLCtx.TagLength == 0 )
+      return;
   for (i = 0; i < TLCtx.TagLength; i++)
   {
     char ch = TLCtx.TextBuff[TLCtx.TagOffset + i];
@@ -714,7 +717,10 @@ void TagLeetApp::AutoComplete()
   }
 
   TagLookupContext TLCtx(&NppC, TagsFilePath);
+
   /* Test that word is valid */
+  if ( TLCtx.TagLength == 0 )
+      return;
   for (i = 0; i < TLCtx.TagLength; i++)
   {
     char ch = TLCtx.TextBuff[TLCtx.TagOffset + i];
