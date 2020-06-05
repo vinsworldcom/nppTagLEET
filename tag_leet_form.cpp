@@ -330,6 +330,7 @@ TL_ERR TagLeetForm::CreateListView(HWND hwnd)
     return TL_ERR_GENERAL;
 
   ::GetClientRect(hwnd, &Rect);
+  // No edit view if doing autocomplete
   if (DoAutoComplete)
     EditHeight = 0;
   else
@@ -692,22 +693,31 @@ void TagLeetForm::UpdateEditView()
     if (Item == NULL)
       return;
 
-    // Get tagsfilepath (which contains the '\tags' filename, so remove it)
-    char Path[TL_MAX_PATH + 16];
-    int n = (int)::strlen(TList.TagsFilePath);
-    ::memcpy(Path, TList.TagsFilePath, n * sizeof(char));
-    if (Path[n-1] == 's' &&
-        Path[n-2] == 'g' &&
-        Path[n-3] == 'a' &&
-        Path[n-4] == 't' &&
-        Path[n-5] == '\\')
-    {
-      Path[n-5] = '\0';
-    }
-
     int iLine = atoi(Item->ExtLine);
-    std::string strFileToOpen(Path);
-    strFileToOpen += "\\";
+    if ( iLine == NULL )
+        return;
+
+    std::string strFileToOpen("");
+    // relative filename, get tags file path to append
+    if ( Item->FileName[0] == '.' )
+    {
+        // Get tagsfilepath (which contains the '\tags' filename, so remove it)
+        char Path[TL_MAX_PATH + 16];
+        int n = (int)::strlen(TList.TagsFilePath);
+        ::memcpy(Path, TList.TagsFilePath, n * sizeof(char));
+        if (Path[n-1] == 's' &&
+            Path[n-2] == 'g' &&
+            Path[n-3] == 'a' &&
+            Path[n-4] == 't' &&
+            Path[n-5] == '\\')
+        {
+          Path[n-5] = '\0';
+        }
+    
+        std::string strFileToOpen(Path);
+        strFileToOpen += "\\";
+    }
+    // otherwise assume full file path/name
     strFileToOpen += Item->FileName;
 
     // open the file for reading
@@ -944,6 +954,7 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
             case VK_RETURN:
             case VK_SPACE:
             {
+              // tooltip
               if ( DoAutoComplete )
               {
                 LVITEM LvItem;
