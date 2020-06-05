@@ -686,6 +686,8 @@ std::string ws2s(const std::wstring& wstr)
 
 void TagLeetForm::UpdateEditView()
 {
+    SetWindowTextA(EditHWnd, (LPCSTR)"");
+
     // Get current list view item (need filename and line number)
     int idx = ListView_GetNextItem( LViewHWnd, -1, LVIS_FOCUSED );
     TagList::TagListItem *Item;
