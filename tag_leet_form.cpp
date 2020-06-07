@@ -718,7 +718,7 @@ void TagLeetForm::UpdateEditView()
           Path[n-5] = '\0';
         }
     
-        std::string strFileToOpen(Path);
+        strFileToOpen += Path;
         strFileToOpen += "\\";
     }
     // otherwise assume full file path/name
