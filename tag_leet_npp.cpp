@@ -375,9 +375,10 @@ TL_ERR TagLeetApp::SelectTagInLine(NppCallContext *NppC, uint32_t LineNum,
 }
 
 TagLookupContext::TagLookupContext(NppCallContext *in_NppC,
-  const char *in_TagsFilePath):
+  const char *in_TagsFilePath, const char *in_GlobalTagsFilePath):
   NppC(in_NppC),
-  TagsFilePath(in_TagsFilePath)
+  TagsFilePath(in_TagsFilePath),
+  GlobalTagsFilePath(in_GlobalTagsFilePath)
 {
   bool NewSelection = false;
   int Start, End;

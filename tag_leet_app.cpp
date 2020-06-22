@@ -530,6 +530,7 @@ void TagLeetApp::LookupTag()
   TlAppSync Sync(this);
   NppCallContext NppC(this);
   char TagsFilePath[TL_MAX_PATH];
+  char GlobalTagsFilePath[TL_MAX_PATH] = "C:\\usr\\share\\ctags\\tags.mingw";
   TCHAR Msg[2048];
   int i;
 
@@ -540,7 +541,7 @@ void TagLeetApp::LookupTag()
     return;
   }
 
-  TagLookupContext TLCtx(&NppC, TagsFilePath);
+  TagLookupContext TLCtx(&NppC, TagsFilePath, GlobalTagsFilePath);
 
   /* Test that word is valid */
   if ( TLCtx.TagLength == 0 )
@@ -724,6 +725,7 @@ void TagLeetApp::AutoComplete()
   TlAppSync Sync(this);
   NppCallContext NppC(this);
   char TagsFilePath[TL_MAX_PATH];
+  char GlobalTagsFilePath[TL_MAX_PATH] = "C:\\usr\\share\\ctags\\tags.mingw";
   TCHAR Msg[2048];
   int i;
 
@@ -734,7 +736,7 @@ void TagLeetApp::AutoComplete()
     return;
   }
 
-  TagLookupContext TLCtx(&NppC, TagsFilePath);
+  TagLookupContext TLCtx(&NppC, TagsFilePath, GlobalTagsFilePath);
 
   /* Test that word is valid */
   if ( TLCtx.TagLength == 0 )

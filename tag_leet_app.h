@@ -81,12 +81,13 @@ private:
 class TagLookupContext
 {
 public:
-  TagLookupContext(NppCallContext *in_NppC, const char *in_TagsFilePath);
+  TagLookupContext(NppCallContext *in_NppC, const char *in_TagsFilePath, const char *in_GlobalTagsFilePath);
   ~TagLookupContext() {};
   void GetLineNumFromTag(bool PrefixMatch, TagList *tl) const;
 
   NppCallContext *NppC;
   const char *TagsFilePath;
+  const char *GlobalTagsFilePath;
   char TextBuff[512];
   int TextLength;
   int TagOffset;

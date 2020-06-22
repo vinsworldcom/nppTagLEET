@@ -54,6 +54,7 @@ private:
     int MaxExCmdWidth, int MaxExtTypeWidth,
     int MaxExtLineWidth, int MaxExtFieldsWidth);
   TL_ERR PopulateTagListHelper(TagLookupContext *TLCtx, TagFile *tf);
+  TL_ERR PopulateTagListHelperGlobal(TagLookupContext *TLCtx, TagFile *tf);
   TL_ERR PopulateTagList(TagLookupContext *TLCtx);
   void GoToSelectedTag();
   LRESULT WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
