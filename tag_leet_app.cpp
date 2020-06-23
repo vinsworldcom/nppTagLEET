@@ -606,8 +606,22 @@ void TagLeetApp::GoForward()
   }
 }
 
-// Following 2 are ported from tag_leet_form.cpp to put in our namespace
+// Following 3 are ported from tag_leet_form.cpp to put in our namespace
 // since we call them from AutoComplete()
+TL_ERR TagLeetApp::PopulateTagListHelperGlobal(TagLookupContext *TLCtx, TagFile *tf)
+{
+  TL_ERR err;
+  char SavedChar;
+  char *Tag = TLCtx->TextBuff + TLCtx->TagOffset;
+
+  SavedChar = Tag[TLCtx->TagLength];
+  /* Ensure Tag is NULL terminated */
+  Tag[TLCtx->TagLength] = '\0';
+  err = TList.Create(Tag, TLCtx->GlobalTagsFilePath, tf, DoPrefixMatch);
+  Tag[TLCtx->TagLength] = SavedChar;
+  return err;
+}
+
 TL_ERR TagLeetApp::PopulateTagListHelper(TagLookupContext *TLCtx, TagFile *tf)
 {
   TL_ERR err;
@@ -654,7 +668,17 @@ TL_ERR TagLeetApp::PopulateTagList(TagLookupContext *TLCtx)
     }
     err = PopulateTagListHelper(TLCtx, &tf);
     if (err)
-      return err;
+    {
+        err = PopulateTagListHelperGlobal(TLCtx, &tf);
+        if (err)
+            return err;
+    }
+  }
+  else if (!err && TList.Count == 0)
+  {
+    err = PopulateTagListHelperGlobal(TLCtx, &tf);
+    if (err)
+        return err;
   }
 
   return TL_ERR_OK;

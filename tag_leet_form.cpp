@@ -1225,7 +1225,6 @@ TL_ERR TagLeetForm::PopulateTagListHelperGlobal(TagLookupContext *TLCtx, TagFile
   SavedChar = Tag[TLCtx->TagLength];
   /* Ensure Tag is NULL terminated */
   Tag[TLCtx->TagLength] = '\0';
-MessageBoxA(NULL, TLCtx->GlobalTagsFilePath, "global", MB_OK);
   err = TList.Create(Tag, TLCtx->GlobalTagsFilePath, tf, DoPrefixMatch);
   Tag[TLCtx->TagLength] = SavedChar;
   return err;

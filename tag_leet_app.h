@@ -142,6 +142,7 @@ private:
     const char *Tag);
   int GetScreenHeight();
 
+  TL_ERR PopulateTagListHelperGlobal(TagLookupContext *TLCtx, TagFile *tf);
   TL_ERR PopulateTagListHelper(TagLookupContext *TLCtx, TagFile *tf);
   TL_ERR PopulateTagList(TagLookupContext *TLCtx);
 
