@@ -111,6 +111,7 @@ public:
   void AutoComplete();
   void FindRefs();
   void UpdateTagDb();
+  void ShowSettings();
   void Lock();
   void Unlock();
   TL_ERR GoToFileLine(const NppLoc *Loc, const char *Tag = NULL);
