@@ -157,6 +157,7 @@
     <ClCompile Include="tag_engine\file_reader_win.cpp" />
     <ClCompile Include="tag_engine\tag_file.cpp" />
     <ClCompile Include="tag_engine\tag_list.cpp" />
+    <ClCompile Include="SettingsDlg.cpp" />
     <ClCompile Include="tag_leet_app.cpp" />
     <ClCompile Include="tag_leet_form.cpp" />
     <ClCompile Include="tag_leet_npp.cpp" />
