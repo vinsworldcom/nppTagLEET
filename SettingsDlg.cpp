@@ -109,9 +109,7 @@ INT_PTR CALLBACK SettingsDlg( HWND hWndDlg, UINT msg, WPARAM wParam,
                                                       FALSE );
 
                     if ( val >= 0 && val <= 10 )
-                    {
                         g_PeekPre = val;
-                    }
 
                     return TRUE;
                 }
@@ -123,9 +121,7 @@ INT_PTR CALLBACK SettingsDlg( HWND hWndDlg, UINT msg, WPARAM wParam,
                                                       FALSE );
 
                     if ( val >= 0 && val <= 10 )
-                    {
                         g_PeekPost = val;
-                    }
 
                     return TRUE;
                 }
