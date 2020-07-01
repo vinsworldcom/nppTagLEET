@@ -1277,16 +1277,24 @@ TL_ERR TagLeetForm::PopulateTagList(TagLookupContext *TLCtx)
     err = PopulateTagListHelper(TLCtx, &tf);
     if (err)
     {
-        err = PopulateTagListHelperGlobal(TLCtx, &tf);
-        if (err)
+        if ( TLCtx->GlobalTagsFilePath[0] != '\0' )
+        {
+            err = PopulateTagListHelperGlobal(TLCtx, &tf);
+            if (err)
+                return err;
+        }
+        else
             return err;
     }
   }
   else if (!err && TList.Count == 0)
   {
-    err = PopulateTagListHelperGlobal(TLCtx, &tf);
-    if (err)
-        return err;
+    if ( TLCtx->GlobalTagsFilePath[0] != '\0' )
+    {
+        err = PopulateTagListHelperGlobal(TLCtx, &tf);
+        if (err)
+            return err;
+    }
   }
 
   return TL_ERR_OK;

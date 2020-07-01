@@ -50,19 +50,21 @@ const TCHAR TagLeetApp::WindowClassName[] = TEXT("TagLEET-form");
 const uint8_t TagLeetApp::TestEolArr[2] = {10, 13};
 
 TCHAR iniFilePath[MAX_PATH];
-const TCHAR configFileName[]  = TEXT( "TagLEET.ini" );
-const TCHAR sectionName[]     = TEXT( "Settings" );
-const TCHAR iniUseNppColors[] = TEXT( "UseNppColors" );
-const TCHAR iniUseNppAutoC[]  = TEXT( "UseNppAutoC" );
-const TCHAR iniUpdateOnSave[] = TEXT( "UpdateOnSave" );
-const TCHAR iniPeekPre[]      = TEXT( "PeekPre" );
-const TCHAR iniPeekPost[]     = TEXT( "PeekPost" );
+const TCHAR configFileName[]    = TEXT( "TagLEET.ini" );
+const TCHAR sectionName[]       = TEXT( "Settings" );
+const TCHAR iniUseNppColors[]   = TEXT( "UseNppColors" );
+const TCHAR iniUseNppAutoC[]    = TEXT( "UseNppAutoC" );
+const TCHAR iniUpdateOnSave[]   = TEXT( "UpdateOnSave" );
+const TCHAR iniPeekPre[]        = TEXT( "PeekPre" );
+const TCHAR iniPeekPost[]       = TEXT( "PeekPost" );
+const TCHAR iniGlobalTagsFile[] = TEXT( "GlobalTagsFile" );
 
 bool g_useNppColors = false;
 bool g_useNppAutoC  = true;
 bool g_UpdateOnSave = false;
 int  g_PeekPre      = 2;
 int  g_PeekPost     = 9;
+char g_GlobalTagsFile[TL_MAX_PATH];
 
 static int __stdcall BrowseCallbackProc(HWND hwnd, UINT uMsg, LPARAM, LPARAM pData)
 {
@@ -212,6 +214,11 @@ TagLeetApp::TagLeetApp(const struct NppData *NppDataObj)
                    iniFilePath );
   g_PeekPost     = ::GetPrivateProfileInt( sectionName, iniPeekPost, 9,
                    iniFilePath );
+  TCHAR globalTagsFile[TL_MAX_PATH];
+  ::GetPrivateProfileString( sectionName, iniGlobalTagsFile, TEXT("\0"), 
+                             globalTagsFile, MAX_PATH, iniFilePath );
+  size_t nNumCharConverted;
+  wcstombs_s(&nNumCharConverted, g_GlobalTagsFile, TL_MAX_PATH, globalTagsFile, TL_MAX_PATH);
 }
 
 TagLeetApp::~TagLeetApp()
@@ -257,6 +264,11 @@ void TagLeetApp::Shutdown()
   ::WritePrivateProfileString( sectionName, iniPeekPre, buf, iniFilePath );
   _itot_s( g_PeekPost, buf, 64, 10 );
   ::WritePrivateProfileString( sectionName, iniPeekPost, buf, iniFilePath );
+
+  TCHAR globalTagsFile[TL_MAX_PATH];
+  size_t nNumCharConverted;
+  mbstowcs_s(&nNumCharConverted, globalTagsFile, TL_MAX_PATH, g_GlobalTagsFile, TL_MAX_PATH);
+  ::WritePrivateProfileString( sectionName, iniGlobalTagsFile, globalTagsFile, iniFilePath );
 
   delete this;
 }
@@ -530,7 +542,6 @@ void TagLeetApp::LookupTag()
   TlAppSync Sync(this);
   NppCallContext NppC(this);
   char TagsFilePath[TL_MAX_PATH];
-  char GlobalTagsFilePath[TL_MAX_PATH] = "C:\\usr\\share\\ctags\\tags.mingw";
   TCHAR Msg[2048];
   int i;
 
@@ -541,7 +552,7 @@ void TagLeetApp::LookupTag()
     return;
   }
 
-  TagLookupContext TLCtx(&NppC, TagsFilePath, GlobalTagsFilePath);
+  TagLookupContext TLCtx(&NppC, TagsFilePath, g_GlobalTagsFile);
 
   /* Test that word is valid */
   if ( TLCtx.TagLength == 0 )
@@ -669,16 +680,24 @@ TL_ERR TagLeetApp::PopulateTagList(TagLookupContext *TLCtx)
     err = PopulateTagListHelper(TLCtx, &tf);
     if (err)
     {
-        err = PopulateTagListHelperGlobal(TLCtx, &tf);
-        if (err)
+        if ( TLCtx->GlobalTagsFilePath[0] != '\0' )
+        {
+            err = PopulateTagListHelperGlobal(TLCtx, &tf);
+            if (err)
+                return err;
+        }
+        else
             return err;
     }
   }
   else if (!err && TList.Count == 0)
   {
-    err = PopulateTagListHelperGlobal(TLCtx, &tf);
-    if (err)
-        return err;
+    if ( TLCtx->GlobalTagsFilePath[0] != '\0' )
+    {
+        err = PopulateTagListHelperGlobal(TLCtx, &tf);
+        if (err)
+            return err;
+    }
   }
 
   return TL_ERR_OK;
@@ -749,7 +768,6 @@ void TagLeetApp::AutoComplete()
   TlAppSync Sync(this);
   NppCallContext NppC(this);
   char TagsFilePath[TL_MAX_PATH];
-  char GlobalTagsFilePath[TL_MAX_PATH] = "C:\\usr\\share\\ctags\\tags.mingw";
   TCHAR Msg[2048];
   int i;
 
@@ -760,7 +778,7 @@ void TagLeetApp::AutoComplete()
     return;
   }
 
-  TagLookupContext TLCtx(&NppC, TagsFilePath, GlobalTagsFilePath);
+  TagLookupContext TLCtx(&NppC, TagsFilePath, g_GlobalTagsFile);
 
   /* Test that word is valid */
   if ( TLCtx.TagLength == 0 )
