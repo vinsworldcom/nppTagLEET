@@ -1,7 +1,7 @@
 #include <windows.h>
+#include <shlwapi.h>
 
 #include "tag_leet_app.h"
-
 #include "resource.h"
 
 using namespace TagLEET_NPP;
@@ -11,6 +11,9 @@ extern bool g_useNppAutoC;
 extern bool g_UpdateOnSave;
 extern int  g_PeekPre;
 extern int  g_PeekPost;
+extern char g_GlobalTagsFile[TL_MAX_PATH];
+
+// TODO:2020-06-30:MVINCENT:use button IDC_BTN_GLOBALTAGSFILE for file picker
 
 void refreshSettings( HWND hWndDlg )
 {
@@ -29,6 +32,9 @@ void refreshSettings( HWND hWndDlg )
     wsprintf( strHint, TEXT( "%d" ), g_PeekPost );
     SendMessage( GetDlgItem( hWndDlg, IDC_EDT_PEEKPOST ), WM_SETTEXT, 0,
                  ( LPARAM )strHint );
+
+    SendMessageA( GetDlgItem( hWndDlg, IDC_EDT_GLOBALTAGSFILE ), WM_SETTEXT, 0,
+                  ( LPARAM )g_GlobalTagsFile );
 }
 
 INT_PTR CALLBACK SettingsDlg( HWND hWndDlg, UINT msg, WPARAM wParam,
@@ -60,8 +66,20 @@ INT_PTR CALLBACK SettingsDlg( HWND hWndDlg, UINT msg, WPARAM wParam,
             switch ( wParam )
             {
                 case IDB_OK:
-                    PostMessage( hWndDlg, WM_CLOSE, 0, 0 );
+                {
+                    SendMessageA( GetDlgItem( hWndDlg, IDC_EDT_GLOBALTAGSFILE ), WM_GETTEXT,
+                                  TL_MAX_PATH, ( LPARAM )g_GlobalTagsFile );
+
+// TODO:2020-07-01:MVINCENT:add check for file existence
+                    if ( ( g_GlobalTagsFile[0] != '\0' ) && ( ! PathFileExistsA( g_GlobalTagsFile ) ) )
+                    {
+                        MessageBoxA( hWndDlg, g_GlobalTagsFile, "File Not Found", MB_OK | MB_ICONEXCLAMATION);
+                    }
+                    else
+                        PostMessage( hWndDlg, WM_CLOSE, 0, 0 );
+
                     return TRUE;
+                }
 
                 case IDC_CHK_NPPCOLORS:
                 {
@@ -109,9 +127,7 @@ INT_PTR CALLBACK SettingsDlg( HWND hWndDlg, UINT msg, WPARAM wParam,
                                                       FALSE );
 
                     if ( val >= 0 && val <= 10 )
-                    {
                         g_PeekPre = val;
-                    }
 
                     return TRUE;
                 }
@@ -123,9 +139,7 @@ INT_PTR CALLBACK SettingsDlg( HWND hWndDlg, UINT msg, WPARAM wParam,
                                                       FALSE );
 
                     if ( val >= 0 && val <= 10 )
-                    {
                         g_PeekPost = val;
-                    }
 
                     return TRUE;
                 }
