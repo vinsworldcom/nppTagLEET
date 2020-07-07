@@ -42,6 +42,7 @@ extern int  g_PeekPost;
 
 #define SORT_UP_IMG_IDX    13
 #define SORT_DOWN_IMG_IDX  14
+#define SCROLL_ADJUST      5
 
 TagLeetForm::TagLeetForm(NppCallContext *NppC)
 {
@@ -774,10 +775,17 @@ void TagLeetForm::UpdateEditView()
     charFormat.crTextColor = colorBg;
     charFormat.crBackColor = colorFg;
 
+    // highlight tag line
     int selStart = (int)::SendMessage( EditHWnd, EM_LINEINDEX, g_PeekPre, 0 );
     int selEnd   = (int)::SendMessage( EditHWnd, EM_LINEINDEX, g_PeekPre+1, 0 );
     SendMessage(EditHWnd, EM_SETSEL , selStart, selEnd);
     SendMessage(EditHWnd, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM) &charFormat);
+
+    // scroll to tag line
+    POINT Pt;
+    Pt.x = 0;
+    Pt.y = max(0, ( ( g_PeekPre - 1 ) * (( App->GetEditViewFontHeight() / 20 ) + SCROLL_ADJUST ) ) );
+    SendMessage(EditHWnd, EM_SETSCROLLPOS, 0, ( LPARAM )&Pt);
 }
 
 LRESULT TagLeetForm::editWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
