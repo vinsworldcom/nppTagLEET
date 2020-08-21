@@ -89,13 +89,13 @@ TL_ERR TagList::Create(const char *Tag, const char *in_TagsFilePath,
   if (TagsFilePath == NULL)
     return TL_ERR_MEM_ALLOC;
 
-  if (cache == NULL)
-  {
+  // if (cache == NULL)
+  // {
     err = tf.Init(TagsFilePath);
     if (err)
       return err;
     cache = &tf;
-  }
+  // }
   err = itr.Init(cache, Tag, 128*1024);
   if (err)
     return err;

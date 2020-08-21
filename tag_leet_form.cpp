@@ -42,6 +42,7 @@ extern int  g_PeekPost;
 
 #define SORT_UP_IMG_IDX    13
 #define SORT_DOWN_IMG_IDX  14
+#define SCROLL_ADJUST      5
 
 TagLeetForm::TagLeetForm(NppCallContext *NppC)
 {
@@ -145,7 +146,7 @@ TL_ERR TagLeetForm::CreateWnd(TagLookupContext *TLCtx)
       title += TEXT(": Autocomplete");
   else
       title += TEXT(": Lookup Tag");
-      
+
   FormHWnd = ::CreateWindowEx(
     WS_EX_TOOLWINDOW,
     TagLeetApp::WindowClassName,
@@ -680,9 +681,9 @@ void TagLeetForm::SetColumnSortArrow(int ColumnIdx, bool Show, bool Down)
 
 std::string ws2s(const std::wstring& wstr)
 {
-    int size_needed = WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), int(wstr.length() + 1), 0, 0, 0, 0); 
+    int size_needed = WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), int(wstr.length() + 1), 0, 0, 0, 0);
     std::string strTo(size_needed, 0);
-    WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), int(wstr.length() + 1), &strTo[0], size_needed, 0, 0); 
+    WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), int(wstr.length() + 1), &strTo[0], size_needed, 0, 0);
     return strTo;
 }
 
@@ -717,7 +718,7 @@ void TagLeetForm::UpdateEditView()
         {
           Path[n-5] = '\0';
         }
-    
+
         strFileToOpen += Path;
         strFileToOpen += "\\";
     }
@@ -774,10 +775,17 @@ void TagLeetForm::UpdateEditView()
     charFormat.crTextColor = colorBg;
     charFormat.crBackColor = colorFg;
 
+    // highlight tag line
     int selStart = (int)::SendMessage( EditHWnd, EM_LINEINDEX, g_PeekPre, 0 );
     int selEnd   = (int)::SendMessage( EditHWnd, EM_LINEINDEX, g_PeekPre+1, 0 );
     SendMessage(EditHWnd, EM_SETSEL , selStart, selEnd);
     SendMessage(EditHWnd, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM) &charFormat);
+
+    // scroll to tag line
+    POINT Pt;
+    Pt.x = 0;
+    Pt.y = max(0, ( ( g_PeekPre - 1 ) * (( App->GetEditViewFontHeight() / 20 ) + SCROLL_ADJUST ) ) );
+    SendMessage(EditHWnd, EM_SETSCROLLPOS, 0, ( LPARAM )&Pt);
 }
 
 LRESULT TagLeetForm::editWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -806,7 +814,7 @@ LRESULT TagLeetForm::splitterWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
 //      SetCursor(_hSplitterCursorUpDown);
       break;
     }
- 
+
     case WM_LBUTTONUP:
     {
       RECT Rect;
@@ -827,7 +835,7 @@ LRESULT TagLeetForm::splitterWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
       {
         POINT pt;
         ::GetCursorPos(&pt);
-      
+
         if (_ptOldPos.y != pt.y)
         {
           iSplitterPos -= _ptOldPos.y - pt.y;
@@ -835,7 +843,7 @@ LRESULT TagLeetForm::splitterWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
         }
         _ptOldPos = pt;
       }
-    
+
 //      SetCursor(_hSplitterCursorUpDown);
       break;
     }
@@ -868,7 +876,7 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
     case WM_PAINT:
       if (NeedUpdateColumns)
       {
-        UpdateColumnWidths(LastMaxTagWidth, LastMaxFilenameWidth, LastMaxExCmdWidth, 
+        UpdateColumnWidths(LastMaxTagWidth, LastMaxFilenameWidth, LastMaxExCmdWidth,
                            LastMaxExtTypeWidth, LastMaxExtLineWidth, LastMaxExtFieldsWidth);
         NeedUpdateColumns = false;
       }
@@ -884,16 +892,16 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
     case WM_DRAWITEM:
     {
         DRAWITEMSTRUCT* pDrawItemStruct = (DRAWITEMSTRUCT *)lParam;
-    
+
         if (pDrawItemStruct->hwndItem == SplitterHWnd)
         {
             RECT   rc      = pDrawItemStruct->rcItem;
             HDC    hDc     = pDrawItemStruct->hDC;
             HBRUSH bgbrush = ::CreateSolidBrush(::GetSysColor(COLOR_BTNFACE));
-    
+
             /* fill background */
             ::FillRect(hDc, &rc, bgbrush);
-    
+
             ::DeleteObject(bgbrush);
             return TRUE;
         }
@@ -911,44 +919,9 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
           return 0;
         case NM_DBLCLK:
           if ( DoAutoComplete )
-          {
-            LVITEM LvItem;
-            TCHAR  tag[MAX_PATH] = {0};
-            int idx = ListView_GetNextItem( LViewHWnd, -1, LVIS_FOCUSED );
-
-            // Autocomplete
-            memset( &LvItem, 0, sizeof(LvItem) );
-            LvItem.mask       = LVIF_TEXT;
-            LvItem.iSubItem   = COLUMN_TAG;
-            LvItem.pszText    = tag;
-            LvItem.cchTextMax = MAX_PATH;
-            LvItem.iItem      = idx;
-
-            SendMessage( LViewHWnd, LVM_GETITEMTEXT, idx, (LPARAM)&LvItem );
-            std::string sTag = ws2s(tag);
-
-            SendMessage( App->getCurrScintilla(), SCI_REPLACESEL, 0, ( LPARAM) sTag.c_str() );
-
-            // Tooltip
-            memset( &LvItem, 0, sizeof(LvItem) );
-            LvItem.mask       = LVIF_TEXT;
-            LvItem.iSubItem   = COLUMN_EXCMD;
-            LvItem.pszText    = tag;
-            LvItem.cchTextMax = MAX_PATH;
-            LvItem.iItem      = idx;
-
-            SendMessage( LViewHWnd, LVM_GETITEMTEXT, idx, (LPARAM)&LvItem );
-            sTag = ws2s(tag);
-
-            int pos = ( int )::SendMessage( App->getCurrScintilla(), SCI_GETCURRENTPOS, 0, 0 );
-            SendMessage( App->getCurrScintilla(), SCI_CALLTIPSHOW, ( WPARAM )pos, ( LPARAM)sTag.c_str() );
-
-            PostCloseMsg();
-          }
+            DoSelectedAutoComplete();
           else
-          {
             GoToSelectedTag();
-          }
           break;
         case LVN_KEYDOWN:
         {
@@ -960,40 +933,7 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
             {
               // tooltip
               if ( DoAutoComplete )
-              {
-                LVITEM LvItem;
-                TCHAR  tag[MAX_PATH] = {0};
-                int idx = ListView_GetNextItem( LViewHWnd, -1, LVIS_FOCUSED );
-
-                // Autocomplete
-                memset( &LvItem, 0, sizeof(LvItem) );
-                LvItem.mask       = LVIF_TEXT;
-                LvItem.iSubItem   = COLUMN_TAG;
-                LvItem.pszText    = tag;
-                LvItem.cchTextMax = MAX_PATH;
-                LvItem.iItem      = idx;
-
-                SendMessage( LViewHWnd, LVM_GETITEMTEXT, idx, (LPARAM)&LvItem );
-                std::string sTag = ws2s(tag);
-
-                SendMessage( App->getCurrScintilla(), SCI_REPLACESEL, 0, ( LPARAM) sTag.c_str() );
-
-                // Tooltip
-                memset( &LvItem, 0, sizeof(LvItem) );
-                LvItem.mask       = LVIF_TEXT;
-                LvItem.iSubItem   = COLUMN_EXCMD;
-                LvItem.pszText    = tag;
-                LvItem.cchTextMax = MAX_PATH;
-                LvItem.iItem      = idx;
-
-                SendMessage( LViewHWnd, LVM_GETITEMTEXT, idx, (LPARAM)&LvItem );
-                sTag = ws2s(tag);
-
-                int pos = ( int )::SendMessage( App->getCurrScintilla(), SCI_GETCURRENTPOS, 0, 0 );
-                SendMessage( App->getCurrScintilla(), SCI_CALLTIPSHOW, ( WPARAM )pos, ( LPARAM)sTag.c_str() );
-
-                PostCloseMsg();
-              }
+                DoSelectedAutoComplete();
               else
                 GoToSelectedTag();
               break;
@@ -1216,6 +1156,20 @@ void TagLeetForm::RefreshList(TagLookupContext *TLCtx)
     RDW_ERASE  | RDW_INVALIDATE | RDW_ALLCHILDREN);
 }
 
+TL_ERR TagLeetForm::PopulateTagListHelperGlobal(TagLookupContext *TLCtx, TagFile *tf)
+{
+  TL_ERR err;
+  char SavedChar;
+  char *Tag = TLCtx->TextBuff + TLCtx->TagOffset;
+
+  SavedChar = Tag[TLCtx->TagLength];
+  /* Ensure Tag is NULL terminated */
+  Tag[TLCtx->TagLength] = '\0';
+  err = TList.Create(Tag, TLCtx->GlobalTagsFilePath, tf, DoPrefixMatch);
+  Tag[TLCtx->TagLength] = SavedChar;
+  return err;
+}
+
 TL_ERR TagLeetForm::PopulateTagListHelper(TagLookupContext *TLCtx, TagFile *tf)
 {
   TL_ERR err;
@@ -1262,14 +1216,32 @@ TL_ERR TagLeetForm::PopulateTagList(TagLookupContext *TLCtx)
     }
     err = PopulateTagListHelper(TLCtx, &tf);
     if (err)
-      return err;
+    {
+        if ( TLCtx->GlobalTagsFilePath[0] != '\0' )
+        {
+            err = PopulateTagListHelperGlobal(TLCtx, &tf);
+            if (err)
+                return err;
+        }
+        else
+            return err;
+    }
+  }
+  else if (!err && TList.Count == 0)
+  {
+    if ( TLCtx->GlobalTagsFilePath[0] != '\0' )
+    {
+        err = PopulateTagListHelperGlobal(TLCtx, &tf);
+        if (err)
+            return err;
+    }
   }
 
   return TL_ERR_OK;
 }
 
 void TagLeetForm::UpdateColumnWidths(int MaxTagWidth, int MaxFilenameWidth,
-    int MaxExCmdWidth, int MaxExtTypeWidth, 
+    int MaxExCmdWidth, int MaxExtTypeWidth,
     int MaxExtLineWidth, int MaxExtFieldsWidth)
 {
   RECT Rect;
@@ -1303,7 +1275,7 @@ void TagLeetForm::UpdateColumnWidths(int MaxTagWidth, int MaxFilenameWidth,
     ::GetClientRect(LViewHWnd, &Rect);
   }
   MaxWidth = Rect.right;
-  TotalWidth = MaxTagWidth + MaxFilenameWidth + MaxExCmdWidth + 
+  TotalWidth = MaxTagWidth + MaxFilenameWidth + MaxExCmdWidth +
                MaxExtTypeWidth + MaxExtLineWidth + MaxExtFieldsWidth;
   if (TotalWidth < MaxWidth)
   {
@@ -1414,6 +1386,42 @@ TL_ERR TagLeetForm::SetListFromTag(TagLookupContext *TLCtx)
     UpdateStatusLine(-1);
   }
   return TL_ERR_OK;
+}
+
+void TagLeetForm::DoSelectedAutoComplete()
+{
+    LVITEM LvItem;
+    TCHAR  tag[MAX_PATH] = {0};
+    int idx = ListView_GetNextItem( LViewHWnd, -1, LVIS_FOCUSED );
+
+    // Autocomplete
+    memset( &LvItem, 0, sizeof(LvItem) );
+    LvItem.mask       = LVIF_TEXT;
+    LvItem.iSubItem   = COLUMN_TAG;
+    LvItem.pszText    = tag;
+    LvItem.cchTextMax = MAX_PATH;
+    LvItem.iItem      = idx;
+
+    SendMessage( LViewHWnd, LVM_GETITEMTEXT, idx, (LPARAM)&LvItem );
+    std::string sTag = ws2s(tag);
+
+    SendMessage( App->getCurrScintilla(), SCI_REPLACESEL, 0, ( LPARAM) sTag.c_str() );
+
+    // Tooltip
+    memset( &LvItem, 0, sizeof(LvItem) );
+    LvItem.mask       = LVIF_TEXT;
+    LvItem.iSubItem   = COLUMN_EXCMD;
+    LvItem.pszText    = tag;
+    LvItem.cchTextMax = MAX_PATH;
+    LvItem.iItem      = idx;
+
+    SendMessage( LViewHWnd, LVM_GETITEMTEXT, idx, (LPARAM)&LvItem );
+    sTag = ws2s(tag);
+
+    int pos = ( int )::SendMessage( App->getCurrScintilla(), SCI_GETCURRENTPOS, 0, 0 );
+    SendMessage( App->getCurrScintilla(), SCI_CALLTIPSHOW, ( WPARAM )pos, ( LPARAM)sTag.c_str() );
+
+    PostCloseMsg();
 }
 
 void TagLeetForm::GoToSelectedTag()
