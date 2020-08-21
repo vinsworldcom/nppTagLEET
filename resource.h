@@ -1,7 +1,7 @@
 #define IDR_ICONS   101
 
-#define VERSION_WORDS    1,3,7,1
-#define VERSION_TAGLEET "1.3.7.1"
+#define VERSION_WORDS    1,3,8,1
+#define VERSION_TAGLEET "1.3.8.1"
 
 #ifndef IDC_STATIC
 #define IDC_STATIC  -1
@@ -16,3 +16,5 @@
 #define IDC_CHK_UPDSAVE        (IDD_SETTINGS + 4)
 #define IDC_EDT_PEEKPRE        (IDD_SETTINGS + 5)
 #define IDC_EDT_PEEKPOST       (IDD_SETTINGS + 6)
+#define IDC_EDT_GLOBALTAGSFILE (IDD_SETTINGS + 7)
+#define IDC_BTN_GLOBALTAGSFILE (IDD_SETTINGS + 8)

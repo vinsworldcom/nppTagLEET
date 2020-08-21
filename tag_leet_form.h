@@ -53,6 +53,7 @@ private:
   void UpdateColumnWidths(int MaxTagWidth, int MaxFilenameWidth,
     int MaxExCmdWidth, int MaxExtTypeWidth,
     int MaxExtLineWidth, int MaxExtFieldsWidth);
+  TL_ERR PopulateTagListHelperGlobal(TagLookupContext *TLCtx, TagFile *tf);
   TL_ERR PopulateTagListHelper(TagLookupContext *TLCtx, TagFile *tf);
   TL_ERR PopulateTagList(TagLookupContext *TLCtx);
   void GoToSelectedTag();
