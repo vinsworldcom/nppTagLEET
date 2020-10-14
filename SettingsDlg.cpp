@@ -13,7 +13,7 @@ extern int  g_PeekPre;
 extern int  g_PeekPost;
 extern char g_GlobalTagsFile[TL_MAX_PATH];
 
-#define MAX_LINES 20
+#define MAX_LINES 25
 
 // TODO:2020-06-30:MVINCENT:use button IDC_BTN_GLOBALTAGSFILE for file picker
 
