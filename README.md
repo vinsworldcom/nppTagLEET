@@ -45,7 +45,7 @@ to the Notepad++ plugins folder:
 
 ## Usage
 
-Assing the Plugins => TagLEET => Lookup Tag menu item to a hotkey of your 
+Assign the Plugins => TagLEET => Lookup Tag menu item to a hotkey of your 
 preference.  In a source file, put the cursor on a word you would like to 
 lookup and press the hotkey.
 
@@ -83,16 +83,17 @@ This does not take too much extra resources and makes the TagLEET experience
 much more dynamic.  It is disabled by default.
 
 To navigate to a lookup, press the `Return` or `Space` while the item is 
-highligted in the top listview.
+highlighted in the top listview.  Use `Tab` to switch between the top and 
+bottom panes.
 
 The bottom pane contains a snapshot (read-only) of the text surrounding the 
 active lookup (highlighted in the top list view).  By default 2 lines before 
-and 9 lines after are shown; the active lookup line is highlighed and 
+and 9 lines after are shown; the active lookup line is highlighted and 
 italicized.  You can configure the number of lines before and after by editing 
-the configuation file items (PeekPre, PeekPost), changes will take effect on 
+the configuration file items (PeekPre, PeekPost), changes will take effect on 
 the next Notepad++ launch.
 
-THe popup window losing focus while the top list view is active will auto close 
+The popup window losing focus while the top list view is active will auto close 
 the popup window.  It will *not* auto close when losing focus from the bottom 
 edit view; this allows for cut and paste and comparison.
 
