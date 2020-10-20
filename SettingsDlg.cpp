@@ -1,5 +1,7 @@
 #include <windows.h>
+#include <shlobj.h>
 #include <shlwapi.h>
+#include <string>
 
 #include "tag_leet_app.h"
 #include "resource.h"
@@ -14,8 +16,6 @@ extern int  g_PeekPost;
 extern char g_GlobalTagsFile[TL_MAX_PATH];
 
 #define MAX_LINES 25
-
-// TODO:2020-06-30:MVINCENT:use button IDC_BTN_GLOBALTAGSFILE for file picker
 
 void refreshSettings( HWND hWndDlg )
 {
@@ -48,6 +48,13 @@ INT_PTR CALLBACK SettingsDlg( HWND hWndDlg, UINT msg, WPARAM wParam,
         case WM_INITDIALOG:
         {
             refreshSettings( hWndDlg );
+
+            std::string version;
+            version = "<a>";
+            version += VERSION_TAGLEET;
+            version += "</a>";
+            SetDlgItemTextA(hWndDlg, IDC_STC_VER, version.c_str());
+
             return TRUE;
         }
 
@@ -61,6 +68,26 @@ INT_PTR CALLBACK SettingsDlg( HWND hWndDlg, UINT msg, WPARAM wParam,
         {
             EndDialog( hWndDlg, 0 );
             return TRUE;
+        }
+
+        case WM_NOTIFY:
+        {
+            switch (((LPNMHDR)lParam)->code)
+            {
+                case NM_CLICK:
+                case NM_RETURN:
+                {
+                    PNMLINK pNMLink = (PNMLINK)lParam;
+                    LITEM   item    = pNMLink->item;
+                    HWND ver = GetDlgItem( hWndDlg, IDC_STC_VER );
+
+                    if ((((LPNMHDR)lParam)->hwndFrom == ver) && (item.iLink == 0))
+                        ShellExecute(hWndDlg, TEXT("open"), TEXT("https://github.com/VinsWorldcom/nppTagLEET"), NULL, NULL, SW_SHOWNORMAL);
+
+                    return TRUE;
+                }
+            }
+            break;
         }
 
         case WM_COMMAND:
@@ -140,6 +167,51 @@ INT_PTR CALLBACK SettingsDlg( HWND hWndDlg, UINT msg, WPARAM wParam,
                     if ( val >= 0 && val <= MAX_LINES )
                         g_PeekPost = val;
 
+                    return TRUE;
+                }
+
+                case IDC_BTN_GLOBALTAGSFILE:
+                {
+                    HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | 
+                        COINIT_DISABLE_OLE1DDE);
+                    if (SUCCEEDED(hr))
+                    {
+                        IFileOpenDialog *pFileOpen;
+                    
+                        // Create the FileOpenDialog object.
+                        hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_ALL, 
+                                IID_IFileOpenDialog, reinterpret_cast<void**>(&pFileOpen));
+                    
+                        if (SUCCEEDED(hr))
+                        {
+                            // Show the Open dialog box.
+                            hr = pFileOpen->Show( hWndDlg );
+                    
+                            // Get the file name from the dialog box.
+                            if (SUCCEEDED(hr))
+                            {
+                                IShellItem *pItem;
+                                hr = pFileOpen->GetResult(&pItem);
+                                if (SUCCEEDED(hr))
+                                {
+                                    PWSTR pszFilePath;
+                                    hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
+                    
+                                    // Display the file name to the user.
+                                    if (SUCCEEDED(hr))
+                                    {
+                                        size_t nNumCharConverted;
+                                        wcstombs_s(&nNumCharConverted, g_GlobalTagsFile, TL_MAX_PATH, pszFilePath, TL_MAX_PATH);
+                                        CoTaskMemFree(pszFilePath);
+                                        refreshSettings( hWndDlg );
+                                    }
+                                    pItem->Release();
+                                }
+                            }
+                            pFileOpen->Release();
+                        }
+                        CoUninitialize();
+                    }
                     return TRUE;
                 }
             }
