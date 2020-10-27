@@ -217,6 +217,14 @@ TagLeetApp::TagLeetApp(const struct NppData *NppDataObj)
   TCHAR globalTagsFile[TL_MAX_PATH];
   ::GetPrivateProfileString( sectionName, iniGlobalTagsFile, TEXT("\0"), 
                              globalTagsFile, MAX_PATH, iniFilePath );
+
+  DWORD fileOrDir = GetFileAttributes( globalTagsFile );
+  if ( ( globalTagsFile[0] != '\0' ) && 
+      ( ( fileOrDir == FILE_ATTRIBUTE_DIRECTORY ) || 
+          ( fileOrDir == INVALID_FILE_ATTRIBUTES ) ) )
+  {
+      _tcscpy( globalTagsFile, TEXT("\0") );
+  }
   size_t nNumCharConverted;
   wcstombs_s(&nNumCharConverted, g_GlobalTagsFile, TL_MAX_PATH, globalTagsFile, TL_MAX_PATH);
 }

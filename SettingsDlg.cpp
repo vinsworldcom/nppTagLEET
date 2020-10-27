@@ -96,13 +96,22 @@ INT_PTR CALLBACK SettingsDlg( HWND hWndDlg, UINT msg, WPARAM wParam,
             {
                 case IDB_OK:
                 {
+                    char temp_GlobalTagsFile[TL_MAX_PATH];
                     SendMessageA( GetDlgItem( hWndDlg, IDC_EDT_GLOBALTAGSFILE ), WM_GETTEXT,
-                                  TL_MAX_PATH, ( LPARAM )g_GlobalTagsFile );
+                                  TL_MAX_PATH, ( LPARAM )temp_GlobalTagsFile );
 
-                    if ( ( g_GlobalTagsFile[0] != '\0' ) && ( ! PathFileExistsA( g_GlobalTagsFile ) ) )
-                        MessageBoxA( hWndDlg, g_GlobalTagsFile, "File Not Found", MB_OK | MB_ICONEXCLAMATION);
+                    DWORD fileOrDir = GetFileAttributesA( temp_GlobalTagsFile );
+                    if ( ( temp_GlobalTagsFile[0] != '\0' ) && 
+                        ( ( fileOrDir == FILE_ATTRIBUTE_DIRECTORY ) || 
+                          ( fileOrDir == INVALID_FILE_ATTRIBUTES ) ) )
+                    {
+                        MessageBoxA( hWndDlg, temp_GlobalTagsFile, "File Not Found", MB_OK | MB_ICONEXCLAMATION);
+                    }
                     else
+                    {
+                        strcpy( g_GlobalTagsFile, temp_GlobalTagsFile );
                         PostMessage( hWndDlg, WM_CLOSE, 0, 0 );
+                    }
 
                     return TRUE;
                 }
