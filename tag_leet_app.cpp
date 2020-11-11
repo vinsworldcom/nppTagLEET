@@ -783,6 +783,12 @@ void TagLeetApp::SciAutoComplete()
   if (err)
     return;
 
+  // if at start of word, just return
+  int currpos = ( int )::SendMessage( NppC.SciHndl, SCI_GETCURRENTPOS, 0, 0 );
+  int wordStart = (int)::SendMessage( NppC.SciHndl, SCI_WORDSTARTPOSITION, currpos, true );
+  if (currpos == wordStart)
+    return;
+
   TagLookupContext TLCtx(&NppC, TagsFilePath, g_GlobalTagsFile);
 
   /* Test that word is valid */
@@ -816,8 +822,10 @@ void TagLeetApp::SciAutoComplete()
   }
 
   // Must clear the selection that TagLookupContext did for us
-  int currpos = ( int )::SendMessage( NppC.SciHndl, SCI_GETCURRENTPOS, 0, 0 );
   SendMessage( NppC.SciHndl, SCI_SETEMPTYSELECTION, currpos, 0 );
+  if (Idx == 0) // if no tags found, then just return
+    return;
+
   SendMessage( NppC.SciHndl, SCI_AUTOCSHOW, TLCtx.TagLength, (LPARAM) wList.c_str() );
 
   if (!err)
