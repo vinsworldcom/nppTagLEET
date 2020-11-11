@@ -35,7 +35,7 @@
 using namespace TagLEET_NPP;
 
 extern bool g_useNppColors;
-extern bool g_useNppAutoC;
+extern bool g_useSciAutoC;
 extern bool g_UpdateOnSave;
 extern int  g_PeekPre;
 extern int  g_PeekPost;
@@ -984,15 +984,15 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
               }
               else if (::GetKeyState(VK_CONTROL) & 0x8000)
               {
-                if ( g_useNppAutoC )
+                if ( g_useSciAutoC )
                 {
-                  g_useNppAutoC = false;
-                  UpdateStatusText(TEXT("Use TagLEET for Autocomplete"));
+                  g_useSciAutoC = false;
+                  UpdateStatusText(TEXT("Do NOT Use Scintilla Autocomplete"));
                 }
                 else
                 {
-                  g_useNppAutoC = true;
-                  UpdateStatusText(TEXT("Use Notepad++ for Autocomplete"));
+                  g_useSciAutoC = true;
+                  UpdateStatusText(TEXT("Use Scintilla Autocomplete"));
                 }
               }
               else
