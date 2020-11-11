@@ -9,7 +9,7 @@
 using namespace TagLEET_NPP;
 
 extern bool g_useNppColors;
-extern bool g_useNppAutoC;
+extern bool g_useSciAutoC;
 extern bool g_UpdateOnSave;
 extern int  g_PeekPre;
 extern int  g_PeekPost;
@@ -22,7 +22,7 @@ void refreshSettings( HWND hWndDlg )
     SendMessage( GetDlgItem( hWndDlg, IDC_CHK_NPPCOLORS ), BM_SETCHECK,
                  ( WPARAM )( g_useNppColors ? 1 : 0 ), 0 );
     SendMessage( GetDlgItem( hWndDlg, IDC_CHK_NPPAUTOC ), BM_SETCHECK,
-                 ( WPARAM )( g_useNppAutoC ? 1 : 0 ), 0 );
+                 ( WPARAM )( g_useSciAutoC ? 1 : 0 ), 0 );
     SendMessage( GetDlgItem( hWndDlg, IDC_CHK_UPDSAVE ), BM_SETCHECK,
                  ( WPARAM )( g_UpdateOnSave ? 1 : 0 ), 0 );
 
@@ -135,9 +135,9 @@ INT_PTR CALLBACK SettingsDlg( HWND hWndDlg, UINT msg, WPARAM wParam,
                                                       BM_GETCHECK, 0, 0 );
 
                     if ( check & BST_CHECKED )
-                        g_useNppAutoC = true;
+                        g_useSciAutoC = true;
                     else
-                        g_useNppAutoC = false;
+                        g_useSciAutoC = false;
 
                     return TRUE;
                 }
