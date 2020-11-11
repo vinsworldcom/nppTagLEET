@@ -704,7 +704,8 @@ void TagLeetForm::UpdateEditView()
 
     std::string strFileToOpen("");
     // relative filename, get tags file path to append
-    if ( Item->FileName[0] == '.' )
+    if ( Item->FileName[0] != 'C' && 
+         Item->FileName[1] != ':' )
     {
         // Get tagsfilepath (which contains the '\tags' filename, so remove it)
         char Path[TL_MAX_PATH + 16];
