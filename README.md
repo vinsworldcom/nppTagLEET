@@ -121,9 +121,10 @@ if a match is not found in the local project's tags file.  Leaving the
 #### Scintilla AutoComplete
 
 This plugin's menu item `Autocomplete` will always launch the TagLEET 
-autocomplete feature.  The 'Settings' dialog 'Use Scintilla autocomplete' will 
-use the [Scintilla autocompletion](https://www.scintilla.org/ScintillaDoc.html#Autocompletion) 
-functionality with the tags file contents.  If a tags file does not exist, this 
-functionality is silently ignored.  This does not integrate with Notepad++ 
-autocomplete (Settings => Preferences => Auto-Completion) but also does not 
-conflict (much).
+autocomplete feature.  This is manual.  The 'Settings' dialog 
+'Use Scintilla autocomplete' will use the 
+[Scintilla autocompletion](https://www.scintilla.org/ScintillaDoc.html#Autocompletion) 
+functionality with the tags file contents.  This is automatically triggered 
+while typing.  If a tags file does not exist, this functionality is silently 
+ignored.  This does not integrate with Notepad++ autocomplete 
+(Settings => Preferences => Auto-Completion) but also does not conflict (much).
