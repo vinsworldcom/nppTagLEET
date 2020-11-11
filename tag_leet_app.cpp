@@ -82,7 +82,7 @@ void CreateTagsDb(HWND NppHndl, NppCallContext *NppC, char *TagsFilePath)
   size_t lastindex = strModuleFileName.find_last_of(".");
   strModuleFileName = strModuleFileName.substr(0, lastindex);
   strModuleFileName += "\\ctags.exe";
-  std::string strArgs = "--extra=fq --fields=+n --file-scope=yes -R";
+  std::string strArgs = "--extras=+Ffq --fields=+n -R";
 
   DWORD err;
   SHELLEXECUTEINFOA ShExecInfo = {0};
