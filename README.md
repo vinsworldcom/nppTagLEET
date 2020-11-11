@@ -11,9 +11,9 @@ index a file and provide inline jump to tags.
 
 This enhancement adds lots of cool features including automated tag file 
 creation and update on saves, another column to the pop-up window showing 
-additional tag file information (i.e., line number if --fields=+n), 
-autocomplete based on tags file and find references using Notepad++ 
-Find in Files feature from the tags directory.
+additional tag file information (i.e., line number, context), autocomplete 
+based on tags file and find references using Notepad++ Find in Files feature 
+from the tags directory.
 
 ## Compiling
 
@@ -83,7 +83,7 @@ CTRL + NUMPAD(+)       | increase font size
 CTRL + NUMPAD(-)       | decrease font size
 CTRL + NUMPAD(/)       | reset font size
 NUMPAD(*)              | toggle default / N++ colors
-CTRL + NUMPAD(*)       | toggle TagLEET / N++ for autocomplete
+CTRL + NUMPAD(*)       | toggle Scintilla autocomplete
 CTRL + ALT + NUMPAD(*) | toggle update on save
 
 Update on save will auto update the current `tags` file after each file save.
@@ -106,6 +106,8 @@ edit view; this allows for cut and paste and comparison.
 
 Press `ESC` to close the popup window or just use the Windows close button.
 
+#### Global Tags File
+
 You can also configure a global tags file in the 'Settings' dialog for the 
 current language you are using.  This file should be generated with at least 
 the following `ctags.exe` options:
@@ -115,3 +117,13 @@ the following `ctags.exe` options:
 and must use absolute file names in the tags file.  This file will be consulted 
 if a match is not found in the local project's tags file.  Leaving the 
 'Settings' dialog empty does not use a global tags file.
+
+#### Scintilla AutoComplete
+
+This plugin's menu item `Autocomplete` will always launch the TagLEET 
+autocomplete feature.  The 'Settings' dialog 'Use Scintilla autocomplete' will 
+use the [Scintilla autocompletion](https://www.scintilla.org/ScintillaDoc.html#Autocompletion) 
+functionality with the tags file contents.  If a tags file does not exist, this 
+functionality is silently ignored.  This does not integrate with Notepad++ 
+autocomplete (Settings => Preferences => Auto-Completion) but also does not 
+conflict (much).
