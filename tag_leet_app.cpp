@@ -789,6 +789,11 @@ void TagLeetApp::SciAutoComplete()
   if (currpos == wordStart)
     return;
 
+  // cannot handle multiple selections
+  int sels = (int)::SendMessage( NppC.SciHndl, SCI_GETSELECTIONS, 0, 0 );
+  if (sels > 1)
+    return;
+
   TagLookupContext TLCtx(&NppC, TagsFilePath, g_GlobalTagsFile);
 
   /* Test that word is valid */
