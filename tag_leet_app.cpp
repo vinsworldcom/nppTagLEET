@@ -831,6 +831,8 @@ void TagLeetApp::SciAutoComplete()
   if (Idx == 0) // if no tags found, then just return
     return;
 
+  SendMessage( NppC.SciHndl, SCI_AUTOCSETSEPARATOR, WPARAM(' '), 0 );
+  SendMessage( NppC.SciHndl, SCI_AUTOCSETIGNORECASE, true, 0 );
   SendMessage( NppC.SciHndl, SCI_AUTOCSHOW, TLCtx.TagLength, (LPARAM) wList.c_str() );
 
   if (!err)
