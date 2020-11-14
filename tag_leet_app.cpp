@@ -69,7 +69,7 @@ char g_GlobalTagsFile[TL_MAX_PATH];
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)
 #define REGIMGID 21580
-static char *xpmTl[] = {
+const char *xpmTl[] = {
 /* columns rows colors chars-per-pixel */
     "16 16 2 1 ",
     "  c #010101",
