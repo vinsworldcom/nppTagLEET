@@ -11,6 +11,7 @@ using namespace TagLEET_NPP;
 extern bool g_useNppColors;
 extern bool g_useSciAutoC;
 extern bool g_UpdateOnSave;
+extern bool g_RecurseDirs;
 extern int  g_PeekPre;
 extern int  g_PeekPost;
 extern char g_GlobalTagsFile[TL_MAX_PATH];
@@ -25,6 +26,8 @@ void refreshSettings( HWND hWndDlg )
                  ( WPARAM )( g_useSciAutoC ? 1 : 0 ), 0 );
     SendMessage( GetDlgItem( hWndDlg, IDC_CHK_UPDSAVE ), BM_SETCHECK,
                  ( WPARAM )( g_UpdateOnSave ? 1 : 0 ), 0 );
+    SendMessage( GetDlgItem( hWndDlg, IDC_CHK_RECURSIVE ), BM_SETCHECK,
+                 ( WPARAM )( g_RecurseDirs ? 1 : 0 ), 0 );
 
     TCHAR strHint[50] = {0};
     wsprintf( strHint, TEXT( "%d" ), g_PeekPre );
@@ -151,6 +154,19 @@ INT_PTR CALLBACK SettingsDlg( HWND hWndDlg, UINT msg, WPARAM wParam,
                         g_UpdateOnSave = true;
                     else
                         g_UpdateOnSave = false;
+
+                    return TRUE;
+                }
+
+                case IDC_CHK_RECURSIVE:
+                {
+                    int check = ( int )::SendMessage( GetDlgItem( hWndDlg, IDC_CHK_RECURSIVE ),
+                                                      BM_GETCHECK, 0, 0 );
+
+                    if ( check & BST_CHECKED )
+                        g_RecurseDirs = true;
+                    else
+                        g_RecurseDirs = false;
 
                     return TRUE;
                 }

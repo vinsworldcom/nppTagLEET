@@ -55,6 +55,7 @@ const TCHAR sectionName[]       = TEXT( "Settings" );
 const TCHAR iniUseNppColors[]   = TEXT( "UseNppColors" );
 const TCHAR iniUseSciAutoC[]    = TEXT( "UseSciAutoC" );
 const TCHAR iniUpdateOnSave[]   = TEXT( "UpdateOnSave" );
+const TCHAR iniRecurseDirs[]    = TEXT( "RecurseSubDirs" );
 const TCHAR iniPeekPre[]        = TEXT( "PeekPre" );
 const TCHAR iniPeekPost[]       = TEXT( "PeekPost" );
 const TCHAR iniGlobalTagsFile[] = TEXT( "GlobalTagsFile" );
@@ -62,6 +63,7 @@ const TCHAR iniGlobalTagsFile[] = TEXT( "GlobalTagsFile" );
 bool g_useNppColors = false;
 bool g_useSciAutoC  = true;
 bool g_UpdateOnSave = false;
+bool g_RecurseDirs  = true;
 int  g_PeekPre      = 2;
 int  g_PeekPost     = 9;
 char g_GlobalTagsFile[TL_MAX_PATH];
@@ -109,7 +111,15 @@ void CreateTagsDb(HWND NppHndl, NppCallContext *NppC, char *TagsFilePath)
   size_t lastindex = strModuleFileName.find_last_of(".");
   strModuleFileName = strModuleFileName.substr(0, lastindex);
   strModuleFileName += "\\ctags.exe";
-  std::string strArgs = "--extras=+Ffq --fields=+n -R";
+  std::string strArgs = "--extras=+Ffq --fields=+n ";
+  if (g_RecurseDirs)
+      strArgs += "-R";
+  else
+  {
+    TCHAR path[MAX_PATH];
+    ::SendMessage(NppHndl, NPPM_GETFULLCURRENTPATH, MAX_PATH, (LPARAM)path);
+    strArgs += ws2s(path);
+  }
 
   DWORD err;
   SHELLEXECUTEINFOA ShExecInfo = {0};
@@ -237,6 +247,8 @@ TagLeetApp::TagLeetApp(const struct NppData *NppDataObj)
                    iniFilePath );
   g_UpdateOnSave = ::GetPrivateProfileInt( sectionName, iniUpdateOnSave, 0,
                    iniFilePath );
+  g_RecurseDirs  = ::GetPrivateProfileInt( sectionName, iniRecurseDirs, 1,
+                   iniFilePath );
   g_PeekPre      = ::GetPrivateProfileInt( sectionName, iniPeekPre, 2,
                    iniFilePath );
   g_PeekPost     = ::GetPrivateProfileInt( sectionName, iniPeekPost, 9,
@@ -295,6 +307,8 @@ void TagLeetApp::Shutdown()
                                g_useSciAutoC ? TEXT( "1" ) : TEXT( "0" ), iniFilePath );
   ::WritePrivateProfileString( sectionName, iniUpdateOnSave,
                                g_UpdateOnSave ? TEXT( "1" ) : TEXT( "0" ), iniFilePath );
+  ::WritePrivateProfileString( sectionName, iniRecurseDirs,
+                               g_RecurseDirs ? TEXT( "1" ) : TEXT( "0" ), iniFilePath );
   _itot_s( g_PeekPre, buf, 64, 10 );
   ::WritePrivateProfileString( sectionName, iniPeekPre, buf, iniFilePath );
   _itot_s( g_PeekPost, buf, 64, 10 );

@@ -26,6 +26,8 @@
 #include "tag_engine/tag_file.h"
 #include "tag_engine/tag_list.h"
 
+std::string ws2s(const std::wstring&);
+
 namespace TagLEET_NPP {
 using namespace TagLEET;
 
