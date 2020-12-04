@@ -106,6 +106,13 @@ edit view; this allows for cut and paste and comparison.
 
 Press `ESC` to close the popup window or just use the Windows close button.
 
+#### Recurse Subdirectories
+
+By default, tags files are created with the '-R' option to recurse all files 
+in the current directory as well as all files in the current directory's 
+subdirectories.  By turning off this option, tags files are created only 
+based on the current active file in Notepad++.
+
 #### Global Tags File
 
 You can also configure a global tags file in the 'Settings' dialog for the 
