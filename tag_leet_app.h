@@ -109,6 +109,7 @@ public:
   void LookupTag();
   void GoBack();
   void GoForward();
+  void SciAutoComplete();
   void AutoComplete();
   void FindRefs();
   void UpdateTagDb();

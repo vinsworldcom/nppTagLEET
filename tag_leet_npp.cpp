@@ -41,6 +41,8 @@ static void NppAutoComplete();
 static void TagLeetSettings();
 static void TagLeetAbout();
 
+extern bool g_useSciAutoC;
+
 BOOL APIENTRY DllMain( HINSTANCE hModule, DWORD Reason, LPVOID lpReserved)
 {
   switch (Reason)
@@ -111,6 +113,10 @@ extern "C" __declspec(dllexport) void beNotified(SCNotification *notifyCode)
         TheApp->UpdateTagDb();
       break;
  
+    case SCN_CHARADDED:
+      if (g_useSciAutoC)
+        TheApp->SciAutoComplete();
+
     default:
       return;
   }

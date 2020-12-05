@@ -35,7 +35,7 @@
 using namespace TagLEET_NPP;
 
 extern bool g_useNppColors;
-extern bool g_useNppAutoC;
+extern bool g_useSciAutoC;
 extern bool g_UpdateOnSave;
 extern int  g_PeekPre;
 extern int  g_PeekPost;
@@ -704,7 +704,8 @@ void TagLeetForm::UpdateEditView()
 
     std::string strFileToOpen("");
     // relative filename, get tags file path to append
-    if ( Item->FileName[0] == '.' )
+    if ( Item->FileName[0] != 'C' && 
+         Item->FileName[1] != ':' )
     {
         // Get tagsfilepath (which contains the '\tags' filename, so remove it)
         char Path[TL_MAX_PATH + 16];
@@ -798,6 +799,8 @@ LRESULT TagLeetForm::editWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
         PostCloseMsg();
         return 0;
       }
+      else if (wParam == VK_TAB)
+        ::SetFocus( LViewHWnd );
       break;
   }
   return ::CallWindowProc(_hDefaultEditProc, hwnd, uMsg, wParam, lParam);
@@ -928,6 +931,12 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
           LPNMLVKEYDOWN pnkd = (LPNMLVKEYDOWN) lParam;
           switch (pnkd->wVKey)
           {
+            case VK_TAB:
+            {
+              if ( !DoAutoComplete )
+                ::SetFocus( EditHWnd );
+              break;
+            }
             case VK_RETURN:
             case VK_SPACE:
             {
@@ -976,15 +985,15 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
               }
               else if (::GetKeyState(VK_CONTROL) & 0x8000)
               {
-                if ( g_useNppAutoC )
+                if ( g_useSciAutoC )
                 {
-                  g_useNppAutoC = false;
-                  UpdateStatusText(TEXT("Use TagLEET for Autocomplete"));
+                  g_useSciAutoC = false;
+                  UpdateStatusText(TEXT("Do NOT Use Scintilla Autocomplete"));
                 }
                 else
                 {
-                  g_useNppAutoC = true;
-                  UpdateStatusText(TEXT("Use Notepad++ for Autocomplete"));
+                  g_useSciAutoC = true;
+                  UpdateStatusText(TEXT("Use Scintilla Autocomplete"));
                 }
               }
               else

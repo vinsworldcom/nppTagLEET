@@ -53,18 +53,47 @@ TCHAR iniFilePath[MAX_PATH];
 const TCHAR configFileName[]    = TEXT( "TagLEET.ini" );
 const TCHAR sectionName[]       = TEXT( "Settings" );
 const TCHAR iniUseNppColors[]   = TEXT( "UseNppColors" );
-const TCHAR iniUseNppAutoC[]    = TEXT( "UseNppAutoC" );
+const TCHAR iniUseSciAutoC[]    = TEXT( "UseSciAutoC" );
 const TCHAR iniUpdateOnSave[]   = TEXT( "UpdateOnSave" );
+const TCHAR iniRecurseDirs[]    = TEXT( "RecurseSubDirs" );
 const TCHAR iniPeekPre[]        = TEXT( "PeekPre" );
 const TCHAR iniPeekPost[]       = TEXT( "PeekPost" );
 const TCHAR iniGlobalTagsFile[] = TEXT( "GlobalTagsFile" );
 
 bool g_useNppColors = false;
-bool g_useNppAutoC  = true;
+bool g_useSciAutoC  = true;
 bool g_UpdateOnSave = false;
+bool g_RecurseDirs  = true;
 int  g_PeekPre      = 2;
 int  g_PeekPost     = 9;
 char g_GlobalTagsFile[TL_MAX_PATH];
+
+#define STR_HELPER(x) #x
+#define STR(x) STR_HELPER(x)
+#define REGIMGID 21580
+const char *xpmTl[] = {
+/* columns rows colors chars-per-pixel */
+    "16 16 2 1 ",
+    "  c #010101",
+    ". c white",
+    /* pixels */
+    "....  ..........",
+    "... .. .........",
+    ".. .... .  .....",
+    ". ...... .. ....",
+    ".  .... .... ...",
+    ". . .. ...... ..",
+    ". ..    ....  ..",
+    ". ... .. .. . ..",
+    ". ... ...  .. ..",
+    ". ... .... .. ..",
+    ".. .. .... .. ..",
+    "... .  ... .. ..",
+    "....  . .. . ...",
+    "........ .  ....",
+    ".........  .....",
+    "................"
+};
 
 static int __stdcall BrowseCallbackProc(HWND hwnd, UINT uMsg, LPARAM, LPARAM pData)
 {
@@ -82,7 +111,15 @@ void CreateTagsDb(HWND NppHndl, NppCallContext *NppC, char *TagsFilePath)
   size_t lastindex = strModuleFileName.find_last_of(".");
   strModuleFileName = strModuleFileName.substr(0, lastindex);
   strModuleFileName += "\\ctags.exe";
-  std::string strArgs = "--extra=fq --fields=+n --file-scope=yes -R";
+  std::string strArgs = "--extras=+Ffq --fields=+n ";
+  if (g_RecurseDirs)
+      strArgs += "-R";
+  else
+  {
+    TCHAR path[MAX_PATH];
+    ::SendMessage(NppHndl, NPPM_GETFULLCURRENTPATH, MAX_PATH, (LPARAM)path);
+    strArgs += ws2s(path);
+  }
 
   DWORD err;
   SHELLEXECUTEINFOA ShExecInfo = {0};
@@ -206,9 +243,11 @@ TagLeetApp::TagLeetApp(const struct NppData *NppDataObj)
   // get the parameter value from plugin config
   g_useNppColors = ::GetPrivateProfileInt( sectionName, iniUseNppColors, 0,
                    iniFilePath );
-  g_useNppAutoC  = ::GetPrivateProfileInt( sectionName, iniUseNppAutoC, 1,
+  g_useSciAutoC  = ::GetPrivateProfileInt( sectionName, iniUseSciAutoC, 1,
                    iniFilePath );
   g_UpdateOnSave = ::GetPrivateProfileInt( sectionName, iniUpdateOnSave, 0,
+                   iniFilePath );
+  g_RecurseDirs  = ::GetPrivateProfileInt( sectionName, iniRecurseDirs, 1,
                    iniFilePath );
   g_PeekPre      = ::GetPrivateProfileInt( sectionName, iniPeekPre, 2,
                    iniFilePath );
@@ -217,6 +256,14 @@ TagLeetApp::TagLeetApp(const struct NppData *NppDataObj)
   TCHAR globalTagsFile[TL_MAX_PATH];
   ::GetPrivateProfileString( sectionName, iniGlobalTagsFile, TEXT("\0"), 
                              globalTagsFile, MAX_PATH, iniFilePath );
+
+  DWORD fileOrDir = GetFileAttributes( globalTagsFile );
+  if ( ( globalTagsFile[0] != '\0' ) && 
+      ( ( fileOrDir == FILE_ATTRIBUTE_DIRECTORY ) || 
+          ( fileOrDir == INVALID_FILE_ATTRIBUTES ) ) )
+  {
+      _tcscpy( globalTagsFile, TEXT("\0") );
+  }
   size_t nNumCharConverted;
   wcstombs_s(&nNumCharConverted, g_GlobalTagsFile, TL_MAX_PATH, globalTagsFile, TL_MAX_PATH);
 }
@@ -256,10 +303,12 @@ void TagLeetApp::Shutdown()
   }
   ::WritePrivateProfileString( sectionName, iniUseNppColors,
                                g_useNppColors ? TEXT( "1" ) : TEXT( "0" ), iniFilePath );
-  ::WritePrivateProfileString( sectionName, iniUseNppAutoC,
-                               g_useNppAutoC ? TEXT( "1" ) : TEXT( "0" ), iniFilePath );
+  ::WritePrivateProfileString( sectionName, iniUseSciAutoC,
+                               g_useSciAutoC ? TEXT( "1" ) : TEXT( "0" ), iniFilePath );
   ::WritePrivateProfileString( sectionName, iniUpdateOnSave,
                                g_UpdateOnSave ? TEXT( "1" ) : TEXT( "0" ), iniFilePath );
+  ::WritePrivateProfileString( sectionName, iniRecurseDirs,
+                               g_RecurseDirs ? TEXT( "1" ) : TEXT( "0" ), iniFilePath );
   _itot_s( g_PeekPre, buf, 64, 10 );
   ::WritePrivateProfileString( sectionName, iniPeekPre, buf, iniFilePath );
   _itot_s( g_PeekPost, buf, 64, 10 );
@@ -762,6 +811,91 @@ void TagLeetApp::FindRefs()
   }
 }
 
+void TagLeetApp::SciAutoComplete()
+{
+  TL_ERR err;
+  TlAppSync Sync(this);
+  NppCallContext NppC(this);
+  char TagsFilePath[TL_MAX_PATH];
+  TCHAR Msg[2048];
+  int i;
+
+  err = GetTagsFilePath(&NppC, TagsFilePath, sizeof(TagsFilePath));
+  if (err)
+    return;
+
+  // if at start of word, just return
+  int currpos = ( int )::SendMessage( NppC.SciHndl, SCI_GETCURRENTPOS, 0, 0 );
+  int wordStart = (int)::SendMessage( NppC.SciHndl, SCI_WORDSTARTPOSITION, currpos, true );
+  if (currpos == wordStart)
+    return;
+
+  // cannot handle multiple selections
+  int sels = (int)::SendMessage( NppC.SciHndl, SCI_GETSELECTIONS, 0, 0 );
+  if (sels > 1)
+    return;
+
+  TagLookupContext TLCtx(&NppC, TagsFilePath, g_GlobalTagsFile);
+
+  /* Test that word is valid */
+  if ( TLCtx.TagLength == 0 )
+      return;
+  for (i = 0; i < TLCtx.TagLength; i++)
+  {
+    char ch = TLCtx.TextBuff[TLCtx.TagOffset + i];
+    if (ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n')
+      return;
+  }
+
+  // Above same as LookupTag()
+  // Below implements the Form() part of LookupTag()
+  err = PopulateTagList(&TLCtx);
+  if (err)
+    return;
+
+  int Idx;
+  TagList::TagListItem *Item;
+  std::string wList;
+
+  // We want prefix match, after all, this is autocomplete
+  DoPrefixMatch = true;
+  TLCtx.GetLineNumFromTag(DoPrefixMatch, &TList);
+  // Loop from SetListFromTag()
+  for (Item = TList.List, Idx=0; Item != NULL; Item = Item->Next, Idx++)
+  {
+    wList += Item->Tag;
+    wList += "?";
+    wList += STR(REGIMGID);
+    wList += " ";
+  }
+
+  // Must clear the selection that TagLookupContext did for us
+  SendMessage( NppC.SciHndl, SCI_SETEMPTYSELECTION, currpos, 0 );
+  if (Idx == 0) // if no tags found, then just return
+    return;
+
+  SendMessage(NppC.SciHndl, SCI_AUTOCSETSEPARATOR, WPARAM(' '), 0 );
+  SendMessage(NppC.SciHndl, SCI_AUTOCSETTYPESEPARATOR, WPARAM('?'), 0 );
+  SendMessage(NppC.SciHndl, SCI_AUTOCSETIGNORECASE, true, 0 );
+  SendMessage(NppC.SciHndl, SCI_REGISTERIMAGE, REGIMGID, (LPARAM)xpmTl);
+  SendMessage(NppC.SciHndl, SCI_AUTOCSHOW, TLCtx.TagLength, (LPARAM) wList.c_str());
+
+  if (!err)
+    return;
+
+  switch (err)
+  {
+    case TL_ERR_SORT:
+      ::_sntprintf(Msg, ARRAY_SIZE(Msg), TEXT("Unsorted tags file: %hs"), TagsFilePath);
+      break;
+    default:
+      ::_sntprintf(Msg, ARRAY_SIZE(Msg), TEXT("unexpected error(%u)"),
+        (unsigned)err);
+      break;
+  }
+  ::MessageBox(NppHndl, Msg, TEXT("TagLEET"), MB_ICONEXCLAMATION);
+}
+
 void TagLeetApp::AutoComplete()
 {
   TL_ERR err;
@@ -790,49 +924,19 @@ void TagLeetApp::AutoComplete()
       return;
   }
 
-  if ( g_useNppAutoC )
+  if (Form != NULL)
   {
-    // Above same as LookupTag()
-    // Below implements the Form() part of LookupTag()
-    err = PopulateTagList(&TLCtx);
-    if (err)
-      return;
-
-    int Idx;
-    TagList::TagListItem *Item;
-    std::string wList;
-
-    // We want prefix match, after all, this is autocomplete
-    DoPrefixMatch = true;
-    TLCtx.GetLineNumFromTag(DoPrefixMatch, &TList);
-    // Loop from SetListFromTag()
-    for (Item = TList.List, Idx=0; Item != NULL; Item = Item->Next, Idx++)
-    {
-      wList += Item->Tag;
-      wList += " ";
-    }
-
-    // Must clear the selection that TagLookupContext did for us
-    int currpos = ( int )::SendMessage( NppC.SciHndl, SCI_GETCURRENTPOS, 0, 0 );
-    SendMessage( NppC.SciHndl, SCI_SETEMPTYSELECTION, currpos, 0 );
-    SendMessage( NppC.SciHndl, SCI_AUTOCSHOW, TLCtx.TagLength, (LPARAM) wList.c_str() );
+    Form->RefreshList(&TLCtx);
+    return;
   }
-  else
-  {
-    if (Form != NULL)
-    {
-      Form->RefreshList(&TLCtx);
-      return;
-    }
 
-    Form = new TagLeetForm(&NppC);
-    if (Form == NULL)
-      return;
+  Form = new TagLeetForm(&NppC);
+  if (Form == NULL)
+    return;
 
-    Form->setDoPrefixMatch();
-    Form->setDoAutoComplete();
-    err = Form->CreateWnd(&TLCtx);
-  }
+  Form->setDoPrefixMatch();
+  Form->setDoAutoComplete();
+  err = Form->CreateWnd(&TLCtx);
 
   if (!err)
     return;
