@@ -215,7 +215,7 @@ static bool IsAbsolutePath(const char *Path)
     return true;
   if (IsLetter(Path[0]))
   {
-    if (Path[1] == ':' && Path[2] == '\\')
+    if (Path[1] == ':' && ((Path[2] == '\\' ) || (Path[2] == '/' )) )
       return true;
   }
   return false;
