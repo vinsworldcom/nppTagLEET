@@ -153,8 +153,8 @@ void SetTagsFilePath(HWND NppHndl, NppCallContext *NppC, char *TagsFilePath)
   TCHAR Msg[2048];
 
   ::_sntprintf(Msg, ARRAY_SIZE(Msg),
-    TEXT("'tags' file not found on path of:\n%s\n\nCreate?"), NppC->Path);
-  int response = ::MessageBox(NppHndl, Msg, TEXT("TagLEET"), MB_YESNO | MB_ICONWARNING);
+    TEXT("'tags' file not found on path of:\n%s\n\nCreate recursively? (No = Local file only)"), NppC->Path);
+  int response = ::MessageBox(NppHndl, Msg, TEXT("TagLEET"), MB_YESNOCANCEL | MB_ICONWARNING);
   if (response == IDYES)
   {
     LPMALLOC pShellMalloc = 0;
@@ -182,6 +182,7 @@ void SetTagsFilePath(HWND NppHndl, NppCallContext *NppC, char *TagsFilePath)
       if (pidl)
       {
         ::SHGetPathFromIDListA( pidl, TagsFilePath );
+        g_RecurseDirs = true;
         CreateTagsDb(NppHndl, NppC, TagsFilePath);
 
         pShellMalloc->Free(pidl);
@@ -189,6 +190,12 @@ void SetTagsFilePath(HWND NppHndl, NppCallContext *NppC, char *TagsFilePath)
       pShellMalloc->Release();
       delete [] info.pszDisplayName;
     }
+  }
+  else if (response == IDNO)
+  {
+      ::SendMessage(NppHndl, NPPM_GETCURRENTDIRECTORY, MAX_PATH, (LPARAM)TagsFilePath);
+      g_RecurseDirs = false;
+      CreateTagsDb(NppHndl, NppC, TagsFilePath);
   }
   return;
 }
