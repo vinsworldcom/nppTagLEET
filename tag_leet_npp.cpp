@@ -38,6 +38,7 @@ static void NppFindRefs();
 static void NppGoBack();
 static void NppGoForward();
 static void NppAutoComplete();
+static void NppDeleteTags();
 static void TagLeetSettings();
 static void TagLeetAbout();
 
@@ -96,6 +97,7 @@ extern "C" __declspec(dllexport) FuncItem * getFuncsArray(int *nbF)
     {_T("&Back"),            NppGoBack,       0, false, TagLeetShortcuts + 1},
     {_T("&Forward"),         NppGoForward,    0, false, TagLeetShortcuts + 2},
     {_T("&Autocomplete"),    NppAutoComplete, 0, false, NULL},
+    {_T("&Delete Tags file"),NppDeleteTags,   0, false, NULL},
     {_T("-SEPARATOR-"),      NULL,            0, false, NULL},
     {_T("&Settings"),        TagLeetSettings, 0, false, NULL},
     {_T("Abou&t"),           TagLeetAbout,    0, false, NULL}};
@@ -159,6 +161,12 @@ static void NppAutoComplete()
 {
   if (TheApp != NULL)
     TheApp->AutoComplete();
+}
+
+static void NppDeleteTags()
+{
+  if (TheApp != NULL)
+    TheApp->DeleteTags();
 }
 
 void TagLeetSettings()

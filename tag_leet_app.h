@@ -111,6 +111,7 @@ public:
   void GoForward();
   void SciAutoComplete();
   void AutoComplete();
+  void DeleteTags();
   void FindRefs();
   void UpdateTagDb();
   void ShowSettings();
