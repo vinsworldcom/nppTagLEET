@@ -153,8 +153,8 @@ void SetTagsFilePath(HWND NppHndl, NppCallContext *NppC, char *TagsFilePath)
   TCHAR Msg[2048];
 
   ::_sntprintf(Msg, ARRAY_SIZE(Msg),
-    TEXT("'tags' file not found on path of:\n%s\n\nCreate?"), NppC->Path);
-  int response = ::MessageBox(NppHndl, Msg, TEXT("TagLEET"), MB_YESNO | MB_ICONWARNING);
+    TEXT("'tags' file not found on path of:\n%s\n\nCreate recursively? (No = Current file only)"), NppC->Path);
+  int response = ::MessageBox(NppHndl, Msg, TEXT("TagLEET"), MB_YESNOCANCEL | MB_ICONWARNING);
   if (response == IDYES)
   {
     LPMALLOC pShellMalloc = 0;
@@ -182,6 +182,7 @@ void SetTagsFilePath(HWND NppHndl, NppCallContext *NppC, char *TagsFilePath)
       if (pidl)
       {
         ::SHGetPathFromIDListA( pidl, TagsFilePath );
+        g_RecurseDirs = true;
         CreateTagsDb(NppHndl, NppC, TagsFilePath);
 
         pShellMalloc->Free(pidl);
@@ -189,6 +190,12 @@ void SetTagsFilePath(HWND NppHndl, NppCallContext *NppC, char *TagsFilePath)
       pShellMalloc->Release();
       delete [] info.pszDisplayName;
     }
+  }
+  else if (response == IDNO)
+  {
+      ::SendMessage(NppHndl, NPPM_GETCURRENTDIRECTORY, MAX_PATH, (LPARAM)TagsFilePath);
+      g_RecurseDirs = false;
+      CreateTagsDb(NppHndl, NppC, TagsFilePath);
   }
   return;
 }
@@ -954,6 +961,35 @@ void TagLeetApp::AutoComplete()
   ::MessageBox(NppHndl, Msg, TEXT("TagLEET"), MB_ICONEXCLAMATION);
 }
 
+void TagLeetApp::DeleteTags()
+{
+  TL_ERR err;
+  NppCallContext NppC(this);
+  char TagsFilePath[TL_MAX_PATH + 16];
+  TCHAR Path[TL_MAX_PATH + 16];
+  char Msg[2048];
+
+  err = GetTagsFilePath(&NppC, TagsFilePath, sizeof(TagsFilePath));
+  if (err)
+  {
+      err = LastTagFileGet(Path, ARRAY_SIZE(Path));
+      if (err)
+      {
+        MessageBox(NppHndl, TEXT("Current and last tag files not found."), 
+                   TEXT("File Not Found"), MB_ICONEXCLAMATION);
+        return;
+      }
+      TSTR_to_str(Path, -1, TagsFilePath, sizeof(TagsFilePath));
+      sprintf(Msg, "Current tags file not found.  Last tags file:\n\n%s\n\nDelete?", TagsFilePath);
+      int response = MessageBoxA(NppHndl, Msg, "Confirm", MB_YESNO | MB_ICONWARNING);
+      if (response == IDNO)
+        return;
+      else
+        LastTagFile[0] = _T('\0');
+  }
+  remove(TagsFilePath);
+}
+
 void TagLeetApp::ShowAbout() const
 {
   if (NppHndl != NULL)
@@ -989,13 +1025,15 @@ void TagLeetApp::LastTagFileSet(const TCHAR *TagsFileName)
 TL_ERR TagLeetApp::LastTagFileGet(TCHAR *FnBuff, int FnBuffCount) const
 {
   int count = (int)::_tcslen(LastTagFile) + 1;
+  if (count <= 1)
+      return TL_ERR_NOT_EXIST;
 
   if (count <= FnBuffCount)
   {
     ::memcpy(FnBuff, LastTagFile, count * sizeof(TCHAR));
     return TL_ERR_OK;
   }
-  return count == 0 ? TL_ERR_NOT_EXIST : TL_ERR_TOO_BIG;
+  return TL_ERR_TOO_BIG;
 }
 
 TlAppSync::~TlAppSync()
