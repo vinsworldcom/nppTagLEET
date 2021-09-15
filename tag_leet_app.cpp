@@ -863,6 +863,8 @@ void TagLeetApp::SciAutoComplete()
   int Idx;
   TagList::TagListItem *Item;
   std::string wList;
+  std::string prevWord;
+  prevWord = "";
 
   // We want prefix match, after all, this is autocomplete
   DoPrefixMatch = true;
@@ -870,6 +872,9 @@ void TagLeetApp::SciAutoComplete()
   // Loop from SetListFromTag()
   for (Item = TList.List, Idx=0; Item != NULL; Item = Item->Next, Idx++)
   {
+    if ( prevWord.compare(Item->Tag) == 0 )
+        continue;
+    prevWord = Item->Tag;
     wList += Item->Tag;
     wList += "?";
     wList += STR(REGIMGID);
