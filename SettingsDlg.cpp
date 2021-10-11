@@ -239,6 +239,12 @@ INT_PTR CALLBACK SettingsDlg( HWND hWndDlg, UINT msg, WPARAM wParam,
                     }
                     return TRUE;
                 }
+
+                case IDCANCEL:
+                {
+                    EndDialog(hWndDlg, 0);
+                    return TRUE;
+                }
             }
         }
     }
