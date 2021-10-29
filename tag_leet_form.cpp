@@ -730,6 +730,13 @@ void TagLeetForm::UpdateEditView()
     std::ifstream file(strFileToOpen.c_str());
     std::string strFileContent;
     std::string strTemp;
+    if (!file.is_open())
+    {
+        strFileContent += strFileToOpen.c_str();
+        strFileContent += " NOT FOUND!";
+        SetWindowTextA(EditHWnd, (LPCSTR)strFileContent.c_str());
+        return;
+    }
 
     int discard = max( 0, (iLine - g_PeekPre) );
     // throw away top lines
