@@ -156,6 +156,7 @@ private:
 
   TagList TList;
   bool DoPrefixMatch;
+  bool FromLocalFile;
 
   static HINSTANCE InstanceHndl;
   CRITICAL_SECTION CritSec;

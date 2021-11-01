@@ -70,29 +70,77 @@ char g_GlobalTagsFile[TL_MAX_PATH];
 
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)
-#define REGIMGID 21580
-const char *xpmTl[] = {
+#define REGIMGIDL 21580
+#define REGIMGIDG 21581
+const char *xpmTlL[] = {
 /* columns rows colors chars-per-pixel */
-    "16 16 2 1 ",
-    "  c #010101",
-    ". c white",
+    "16 16 9 1 ",
+    "  c #0f0f0f",
+    ". c #800000",
+    "X c red",
+    "o c #008000",
+    "O c green",
+    "+ c navy",
+    "@ c blue",
+    "# c #808080",
+    "$ c white",
     /* pixels */
-    "....  ..........",
-    "... .. .........",
-    ".. .... .  .....",
-    ". ...... .. ....",
-    ".  .... .... ...",
-    ". . .. ...... ..",
-    ". ..    ....  ..",
-    ". ... .. .. . ..",
-    ". ... ...  .. ..",
-    ". ... .... .. ..",
-    ".. .. .... .. ..",
-    "... .  ... .. ..",
-    "....  . .. . ...",
-    "........ .  ....",
-    ".........  .....",
-    "................"
+    "$$$$ $$$$$$$$$$$",
+    "$$$ O $$$$$$$$$$",
+    "$$ OOO $$$$$$$$$",
+    "$ OOOoo $$$$$ $$",
+    " OOOoo $$$$$ X $",
+    "$ Ooo ##### X.. ",
+    "$$ o $$$#$ X.. $",
+    "$$$ $$$$#$$ . $$",
+    "$$$$$$$$#$$$ $$$",
+    "$$$$$$$$#$$$$$$$",
+    "$$$$$$$$#$$$ $$$",
+    "$$$$$$$$### @ $$",
+    "$$$$$$$$$$ @++ $",
+    "$$$$$$$$$ @++ $$",
+    "$$$$$$$$$$ + $$$",
+    "$$$$$$$$$$$ $$$$"
+};
+
+const char *xpmTlG[] = {
+    "16 16 19 1 ",
+    "  c #0f0f0f",
+    ". c #00003A",
+    "X c #660000",
+    "o c #000066",
+    "O c #800000",
+    "+ c red",
+    "@ c #B6663A",
+    "# c #DB903A",
+    "$ c #FFB666",
+    "% c navy",
+    "& c #0066B6",
+    "* c blue",
+    "= c #3A90DB",
+    "- c #66B6FF",
+    "; c #808080",
+    ": c #FFFFB6",
+    "> c #90DBFF",
+    ", c #B6FFFF",
+    "< c white",
+    /* pixels */
+    "<:X  &<<<<<<<<<<",
+    ":X-<<@><<<<<<<<<",
+    "$&<<<<<<<<<<<<<<",
+    "#=<# .><<<<<< <<",
+    "$&<<<@><<<<< + <",
+    ":X-<<@><;;; +OO ",
+    "<:X  o,<;< +OO <",
+    "<<<<<<<<;<< O <<",
+    "<<<<<<<<;<<< <<<",
+    "<<<<<<<<;<<<<<<<",
+    "<<<<<<<<;<<< <<<",
+    "<<<<<<<<;;; * <<",
+    "<<<<<<<<<< *%% <",
+    "<<<<<<<<< *%% <<",
+    "<<<<<<<<<< % <<<",
+    "<<<<<<<<<<< <<<<"
 };
 
 static int __stdcall BrowseCallbackProc(HWND hwnd, UINT uMsg, LPARAM, LPARAM pData)
@@ -738,6 +786,7 @@ TL_ERR TagLeetApp::PopulateTagList(TagLookupContext *TLCtx)
     {
         if ( TLCtx->GlobalTagsFilePath[0] != '\0' )
         {
+            FromLocalFile = false;
             err = PopulateTagListHelperGlobal(TLCtx, &tf);
             if (err)
                 return err;
@@ -750,6 +799,7 @@ TL_ERR TagLeetApp::PopulateTagList(TagLookupContext *TLCtx)
   {
     if ( TLCtx->GlobalTagsFilePath[0] != '\0' )
     {
+        FromLocalFile = false;
         err = PopulateTagListHelperGlobal(TLCtx, &tf);
         if (err)
             return err;
@@ -827,6 +877,8 @@ void TagLeetApp::SciAutoComplete()
   TCHAR Msg[2048];
   int i;
 
+  FromLocalFile = true;
+
   err = GetTagsFilePath(&NppC, TagsFilePath, sizeof(TagsFilePath));
   if (err)
     return;
@@ -877,7 +929,10 @@ void TagLeetApp::SciAutoComplete()
     prevWord = Item->Tag;
     wList += Item->Tag;
     wList += "?";
-    wList += STR(REGIMGID);
+    if (FromLocalFile)
+        wList += STR(REGIMGIDL);
+    else
+        wList += STR(REGIMGIDG);
     wList += " ";
   }
 
@@ -889,7 +944,8 @@ void TagLeetApp::SciAutoComplete()
   SendMessage(NppC.SciHndl, SCI_AUTOCSETSEPARATOR, WPARAM(' '), 0 );
   SendMessage(NppC.SciHndl, SCI_AUTOCSETTYPESEPARATOR, WPARAM('?'), 0 );
   SendMessage(NppC.SciHndl, SCI_AUTOCSETIGNORECASE, true, 0 );
-  SendMessage(NppC.SciHndl, SCI_REGISTERIMAGE, REGIMGID, (LPARAM)xpmTl);
+  SendMessage(NppC.SciHndl, SCI_REGISTERIMAGE, REGIMGIDL, (LPARAM)xpmTlL);
+  SendMessage(NppC.SciHndl, SCI_REGISTERIMAGE, REGIMGIDG, (LPARAM)xpmTlG);
   SendMessage(NppC.SciHndl, SCI_AUTOCSHOW, TLCtx.TagLength, (LPARAM) wList.c_str());
 
   if (!err)
