@@ -715,8 +715,8 @@ TL_ERR TagLeetApp::PopulateTagList(TagLookupContext *TLCtx)
 
   err = PopulateTagListHelper(TLCtx, &tf);
   /* For prefix match we don't have any fall backs */
-  if (DoPrefixMatch)
-    return err;
+  // if (DoPrefixMatch)
+    // return err;
 
   Tag = TLCtx->TextBuff + TLCtx->TagOffset;
   /* If no match, perhaps file extension need to be added to selection */
