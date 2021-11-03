@@ -83,7 +83,7 @@ const char *xpmTlL[] = {
     "+ c navy",
     "@ c blue",
     "# c #808080",
-    "$ c white",
+    "$ c None",
     /* pixels */
     "$$$$ $$$$$$$$$$$",
     "$$$ O $$$$$$$$$$",
@@ -123,7 +123,7 @@ const char *xpmTlG[] = {
     ": c #FFFFB6",
     "> c #90DBFF",
     ", c #B6FFFF",
-    "< c white",
+    "< c None",
     /* pixels */
     "<:X  &<<<<<<<<<<",
     ":X-<<@><<<<<<<<<",
