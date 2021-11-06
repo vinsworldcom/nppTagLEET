@@ -159,9 +159,9 @@ void CreateTagsDb(HWND NppHndl, NppCallContext *NppC, char *TagsFilePath)
   size_t lastindex = strModuleFileName.find_last_of(".");
   strModuleFileName = strModuleFileName.substr(0, lastindex);
   strModuleFileName += "\\ctags.exe";
-  std::string strArgs = "--extras=+Ffq --fields=+n ";
+  std::string strArgs = " --extras=+Ffq --fields=+Kn ";
   if (g_RecurseDirs)
-      strArgs += "-R";
+      strArgs += " -R ";
   else
   {
     TCHAR path[MAX_PATH];
