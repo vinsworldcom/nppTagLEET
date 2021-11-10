@@ -829,9 +829,13 @@ static TagKind get_tag_kind(const char *ExtStr, uint32_t ExtStrSize, TagLineProp
 
     if (i - start >= 1)
     {
-      kind_char = ExtStr[start];
-      Props->ExtType = ExtStr + start;
-      Props->ExtTypeSize = i - start;
+      int header = 0;
+      if (::memcmp(ExtStr + start, "kind:", 5) == 0)
+          header = 5;
+
+      kind_char = ExtStr[start + header];
+      Props->ExtType = ExtStr + start + header;
+      Props->ExtTypeSize = i - start - header;
       Props->ExtFieldsSize -= (i - start);
       if ( Props->ExtFieldsSize <= 0 )
       {
@@ -840,19 +844,6 @@ static TagKind get_tag_kind(const char *ExtStr, uint32_t ExtStrSize, TagLineProp
       }
       else
           Props->ExtFields = ExtStr + start + (i - start);
-    }
-    else if (i - start == 6 && ::memcmp(ExtStr + start, "kind:", 5) == 0)
-    {
-      kind_char = ExtStr[start+5];
-      Props->ExtType = ExtStr + start + 5;
-      Props->ExtFieldsSize -= 6;
-      if ( Props->ExtFieldsSize <= 0 )
-      {
-          Props->ExtFields = "";
-          Props->ExtFieldsSize = 0;
-      }
-      else
-          Props->ExtFields = ExtStr + start + 6;
     }
     else if (i == ExtStrSize)
     {
