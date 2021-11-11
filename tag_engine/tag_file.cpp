@@ -834,8 +834,8 @@ static TagKind get_tag_kind(const char *ExtStr, uint32_t ExtStrSize, TagLineProp
           header = 5;
 
       kind_char = ExtStr[start + header];
-      Props->ExtType = ExtStr + start + header;
-      Props->ExtTypeSize = i - start - header;
+      Props->ExtKind = ExtStr + start + header;
+      Props->ExtKindSize = i - start - header;
       Props->ExtFieldsSize -= (i - start);
       if ( Props->ExtFieldsSize <= 0 )
       {
@@ -937,8 +937,8 @@ TL_ERR TagIterator::GetTagLineProps(TagLineProperties *Props) const
   }
 
   // These are be parsed in the following function calls
-  Props->ExtType = " ";
-  Props->ExtTypeSize = 1;
+  Props->ExtKind = " ";
+  Props->ExtKindSize = 1;
   Props->ExtLine = " ";
   Props->ExtLineSize = 1;
 

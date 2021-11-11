@@ -414,8 +414,8 @@ TL_ERR TagLeetForm::CreateListView(HWND hwnd)
   rc = ListView_InsertColumn(LViewHWnd, 2, &LvCol);
   err = rc == -1 && !err ? TL_ERR_GENERAL : err;
 
-  LvCol.iSubItem = COLUMN_EXTTYPE;
-  LvCol.pszText = const_cast<LPTSTR>(_T("Type"));
+  LvCol.iSubItem = COLUMN_EXTKIND;
+  LvCol.pszText = const_cast<LPTSTR>(_T("Kind"));
   rc = ListView_InsertColumn(LViewHWnd, 3, &LvCol);
   err = rc == -1 && !err ? TL_ERR_GENERAL : err;
 
@@ -459,7 +459,7 @@ void TagLeetForm::PostCloseMsg() const
     ::PostMessage(FormHWnd, WM_CLOSE, 0, 0);
 }
 
-static void CleanExtType(const char **StrPtr, int *StrSizePtr)
+static void CleanExtKind(const char **StrPtr, int *StrSizePtr)
 {
   const char *Str = *StrPtr;
   int StrSize = *StrSizePtr;
@@ -620,10 +620,10 @@ int CALLBACK TagLeetForm::LvSortFunc(LPARAM Item1Ptr, LPARAM Item2Ptr,
         CompVal = comp_str(str1, length1, str2, length2,
           Form->TList.TagsCaseInsensitive);
         break;
-      case COLUMN_EXTTYPE:
-        str1 = Item1->ExtType;
+      case COLUMN_EXTKIND:
+        str1 = Item1->ExtKind;
         length1 = (int)::strlen(str1);
-        str2 = Item2->ExtType;
+        str2 = Item2->ExtKind;
         length2 = (int)::strlen(str2);
         CompVal = comp_str(str1, length1, str2, length2,
           Form->TList.TagsCaseInsensitive);
@@ -887,7 +887,7 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
       if (NeedUpdateColumns)
       {
         UpdateColumnWidths(LastMaxTagWidth, LastMaxFilenameWidth, LastMaxExCmdWidth,
-                           LastMaxExtTypeWidth, LastMaxExtLineWidth, LastMaxExtFieldsWidth);
+                           LastMaxExtKindWidth, LastMaxExtLineWidth, LastMaxExtFieldsWidth);
         NeedUpdateColumns = false;
       }
       break;
@@ -1257,25 +1257,25 @@ TL_ERR TagLeetForm::PopulateTagList(TagLookupContext *TLCtx)
 }
 
 void TagLeetForm::UpdateColumnWidths(int MaxTagWidth, int MaxFilenameWidth,
-    int MaxExCmdWidth, int MaxExtTypeWidth,
+    int MaxExCmdWidth, int MaxExtKindWidth,
     int MaxExtLineWidth, int MaxExtFieldsWidth)
 {
   RECT Rect;
   int TotalWidth, MaxWidth;
-  int TagWidth, FilenameWidth, ExCmdWidth, ExtTypeWidth, ExtLineWidth, ExtFieldsWidth, ItemsHight;
+  int TagWidth, FilenameWidth, ExCmdWidth, ExtKindWidth, ExtLineWidth, ExtFieldsWidth, ItemsHight;
   DWORD ApproxRect;
 
   LastMaxTagWidth = MaxTagWidth;
   LastMaxFilenameWidth = MaxFilenameWidth;
   LastMaxExCmdWidth = MaxExCmdWidth;
-  LastMaxExtTypeWidth = MaxExtTypeWidth;
+  LastMaxExtKindWidth = MaxExtKindWidth;
   LastMaxExtLineWidth = MaxExtLineWidth;
   LastMaxExtFieldsWidth = MaxExtFieldsWidth;
 
   MaxTagWidth += 28;
   MaxFilenameWidth += 12;
   MaxExCmdWidth += 12;
-  MaxExtTypeWidth += 12;
+  MaxExtKindWidth += 12;
   MaxExtLineWidth += 12;
   MaxExtFieldsWidth += 12;
 
@@ -1292,26 +1292,26 @@ void TagLeetForm::UpdateColumnWidths(int MaxTagWidth, int MaxFilenameWidth,
   }
   MaxWidth = Rect.right;
   TotalWidth = MaxTagWidth + MaxFilenameWidth + MaxExCmdWidth +
-               MaxExtTypeWidth + MaxExtLineWidth + MaxExtFieldsWidth;
+               MaxExtKindWidth + MaxExtLineWidth + MaxExtFieldsWidth;
   if (TotalWidth < MaxWidth)
   {
     /* Try default 40%-30%-30% */
     TagWidth = MaxWidth * 15 / 100;
     FilenameWidth = MaxWidth * 20 / 100;
     ExCmdWidth = MaxWidth * 40 / 100;
-    ExtTypeWidth = MaxWidth * 5 / 100;
+    ExtKindWidth = MaxWidth * 5 / 100;
     ExtLineWidth = MaxWidth * 5 / 100;
-    ExtFieldsWidth = MaxWidth - TagWidth - FilenameWidth - ExCmdWidth - ExtTypeWidth - ExtLineWidth;
+    ExtFieldsWidth = MaxWidth - TagWidth - FilenameWidth - ExCmdWidth - ExtKindWidth - ExtLineWidth;
     /* If no fit then just expand each 'max' */
     if (MaxTagWidth > TagWidth || MaxFilenameWidth > FilenameWidth ||
-      MaxExCmdWidth > ExCmdWidth || MaxExtTypeWidth > ExtTypeWidth ||
+      MaxExCmdWidth > ExCmdWidth || MaxExtKindWidth > ExtKindWidth ||
       MaxExtLineWidth > ExtLineWidth || MaxExtFieldsWidth > ExtFieldsWidth)
     {
       int Extra = (MaxWidth - TotalWidth)/6;
       TagWidth = MaxTagWidth + Extra;
       FilenameWidth = MaxFilenameWidth + Extra;
       ExCmdWidth = MaxExCmdWidth + Extra;
-      ExtTypeWidth = MaxExtTypeWidth + Extra;
+      ExtKindWidth = MaxExtKindWidth + Extra;
       ExtLineWidth = MaxExtLineWidth + Extra;
       ExtFieldsWidth = MaxExtFieldsWidth + Extra;
     }
@@ -1328,11 +1328,11 @@ void TagLeetForm::UpdateColumnWidths(int MaxTagWidth, int MaxFilenameWidth,
       Remaining * 80 / 100;
   }
 
-  ExtFieldsWidth = MaxWidth - TagWidth - FilenameWidth - ExCmdWidth - ExtTypeWidth - ExtLineWidth;
+  ExtFieldsWidth = MaxWidth - TagWidth - FilenameWidth - ExCmdWidth - ExtKindWidth - ExtLineWidth;
   ListView_SetColumnWidth(LViewHWnd, 0, TagWidth);
   ListView_SetColumnWidth(LViewHWnd, 1, FilenameWidth);
   ListView_SetColumnWidth(LViewHWnd, 2, ExCmdWidth);
-  ListView_SetColumnWidth(LViewHWnd, 3, ExtTypeWidth);
+  ListView_SetColumnWidth(LViewHWnd, 3, ExtKindWidth);
   ListView_SetColumnWidth(LViewHWnd, 4, ExtLineWidth);
   ListView_SetColumnWidth(LViewHWnd, 5, ExtFieldsWidth);
 }
@@ -1345,7 +1345,7 @@ TL_ERR TagLeetForm::SetListFromTag(TagLookupContext *TLCtx)
   int MaxTagWidth = 0;
   int MaxFilenameWidth = 0;
   int MaxExCmdWidth = 0;
-  int MaxExtTypeWidth = 0;
+  int MaxExtKindWidth = 0;
   int MaxExtLineWidth = 0;
   int MaxExtFieldsWidth = 0;
 
@@ -1378,14 +1378,14 @@ TL_ERR TagLeetForm::SetListFromTag(TagLookupContext *TLCtx)
     SetItemText(LvIdx, COLUMN_TAG, Item->Tag, &MaxTagWidth);
     SetItemText(LvIdx, COLUMN_FILENAME, Item->FileName, &MaxFilenameWidth, ::FileFromPath);
     SetItemText(LvIdx, COLUMN_EXCMD, Item->ExCmd, &MaxExCmdWidth, ::CleanExCmd);
-    SetItemText(LvIdx, COLUMN_EXTTYPE, Item->ExtType, &MaxExtTypeWidth, ::CleanExtType);
+    SetItemText(LvIdx, COLUMN_EXTKIND, Item->ExtKind, &MaxExtKindWidth, ::CleanExtKind);
     SetItemText(LvIdx, COLUMN_EXTLINE, Item->ExtLine, &MaxExtLineWidth, ::CleanExtLine);
     SetItemText(LvIdx, COLUMN_EXTFIELDS, Item->ExtFields, &MaxExtFieldsWidth, ::CleanExtFields);
   }
 
   if (Idx > 0)
   {
-    UpdateColumnWidths(MaxTagWidth, MaxFilenameWidth, MaxExCmdWidth, MaxExtTypeWidth, MaxExtLineWidth, MaxExtFieldsWidth);
+    UpdateColumnWidths(MaxTagWidth, MaxFilenameWidth, MaxExCmdWidth, MaxExtKindWidth, MaxExtLineWidth, MaxExtFieldsWidth);
     UINT state = LVIS_FOCUSED | LVIS_SELECTED;
     if (FocusIdx == -1)
       FocusIdx = ListView_GetNextItem(LViewHWnd, -1, LVNI_ALL);
