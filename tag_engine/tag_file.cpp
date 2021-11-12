@@ -830,7 +830,7 @@ static TagKind get_tag_kind(const char *ExtStr, uint32_t ExtStrSize, TagLineProp
     if (i - start >= 1)
     {
       int header = 0;
-      if (::memcmp(ExtStr + start, "kind:", 5) == 0)
+      if (i - start >= 6 && ::memcmp(ExtStr + start, "kind:", 5) == 0)
           header = 5;
 
       kind_char = ExtStr[start + header];
