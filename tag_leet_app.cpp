@@ -933,7 +933,8 @@ void TagLeetApp::SciAutoComplete()
         wList += STR(REGIMGIDL);
     else
         wList += STR(REGIMGIDG);
-    wList += " ";
+    if (Item->Next != NULL)
+        wList += " ";
   }
 
   // Must clear the selection that TagLookupContext did for us
