@@ -168,6 +168,7 @@
     <ClInclude Include="resource.h" />
     <ClInclude Include="SciLexer.h" />
     <ClInclude Include="Scintilla.h" />
+    <ClInclude Include="Sci_Position.h" />
     <ClInclude Include="tag_engine\avl.h" />
     <ClInclude Include="tag_engine\file_reader.h" />
     <ClInclude Include="tag_engine\tag_file.h" />
