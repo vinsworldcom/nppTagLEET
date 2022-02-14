@@ -1103,7 +1103,7 @@ void TagLeetForm::UpdateStatusLine(int FocusIdx)
 
   if (FocusIdx == -1)
   {
-    ::SetWindowText(StatusHWnd, TEXT(""));
+    ::SetWindowTextA(StatusHWnd, TList.TagsFilePath);
     return;
   }
 
