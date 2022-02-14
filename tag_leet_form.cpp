@@ -326,6 +326,7 @@ TL_ERR TagLeetForm::CreateListView(HWND hwnd)
   HWND HdrHndl;
   int EditHeight;
   int LViewHeight;
+  int iStatusWidths[] = {250, -1};
 
   hImgList = ImageList_LoadImage(App->GetInstance(),
     MAKEINTRESOURCE(IDR_ICONS),16,0,CLR_DEFAULT,IMAGE_BITMAP,LR_DEFAULTCOLOR);
@@ -340,12 +341,17 @@ TL_ERR TagLeetForm::CreateListView(HWND hwnd)
     EditHeight  = ( Rect.bottom - StatusHeight - SPLITTER_HEIGHT ) / 2;
   LViewHeight = Rect.bottom - StatusHeight - SPLITTER_HEIGHT - EditHeight;
 
-  StatusHWnd = ::CreateWindowEx(WS_EX_CLIENTEDGE, TEXT("EDIT"), NULL,
+  StatusHWnd = ::CreateWindowEx(WS_EX_CLIENTEDGE, STATUSCLASSNAME, NULL,
     WS_CHILD | WS_VISIBLE | ES_READONLY,
     0, Rect.bottom - StatusHeight, Rect.right, StatusHeight,
     hwnd, NULL, App->GetInstance(), NULL);
-  if (StatusHWnd != NULL && StatusFont != NULL)
-    ::PostMessage(StatusHWnd, WM_SETFONT, (WPARAM)StatusFont, (LPARAM)0);
+  if (StatusHWnd != NULL)
+  {
+    iStatusWidths[0] = Rect.right/2;
+    ::SendMessage(StatusHWnd, SB_SETPARTS, 2, (LPARAM)iStatusWidths);
+    if (StatusFont != NULL)
+      ::PostMessage(StatusHWnd, WM_SETFONT, (WPARAM)StatusFont, (LPARAM)0);
+  }
 
   LViewHWnd = ::CreateWindowEx(WS_EX_CLIENTEDGE, WC_LISTVIEW, NULL,
     WS_CHILD | LVS_REPORT | LVS_SINGLESEL | WS_VISIBLE,
@@ -1088,9 +1094,24 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
   return DefWindowProc(hwnd,uMsg, wParam, lParam);
 }
 
+void TagLeetForm::UpdateStatusTagfile()
+{
+  TCHAR TmpBuff[TL_MAX_PATH];
+  str_to_TSTR(TList.TagsFilePath, -1, TmpBuff, ARRAY_SIZE(TmpBuff));
+
+  if (StatusHWnd == NULL)
+    return;
+
+  ::SendMessage(StatusHWnd, SB_SETTEXT, 1, (LPARAM)TmpBuff);
+}
+
 void TagLeetForm::UpdateStatusText(std::wstring message)
 {
-  ::SetWindowText(StatusHWnd, message.c_str());
+  if (StatusHWnd == NULL)
+    return;
+
+  ::SendMessage(StatusHWnd, SB_SETTEXT, 0, (LPARAM)message.c_str());
+  UpdateStatusTagfile();
 }
 
 void TagLeetForm::UpdateStatusLine(int FocusIdx)
@@ -1101,9 +1122,10 @@ void TagLeetForm::UpdateStatusLine(int FocusIdx)
   if (StatusHWnd == NULL)
     return;
 
+  UpdateStatusTagfile();
   if (FocusIdx == -1)
   {
-    ::SetWindowTextA(StatusHWnd, TList.TagsFilePath);
+    ::SendMessage(StatusHWnd, SB_SETTEXT, 0, (LPARAM)TEXT(""));
     return;
   }
 
@@ -1112,7 +1134,7 @@ void TagLeetForm::UpdateStatusLine(int FocusIdx)
     return;
 
   str_to_TSTR(Item->FileName, -1, TmpBuff, ARRAY_SIZE(TmpBuff));
-  ::SetWindowText(StatusHWnd, TmpBuff);
+  ::SendMessage(StatusHWnd, SB_SETTEXT, 0, (LPARAM)TmpBuff);
 }
 
 TagList::TagListItem *TagLeetForm::GetItemData(int ItemIdx)
