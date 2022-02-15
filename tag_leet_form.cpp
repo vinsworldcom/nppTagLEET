@@ -185,6 +185,7 @@ void TagLeetForm::OnResize()
   int StatusHeight = App->GetStatusHeight();
   int FocusIdx;
   int splitterPos = iSplitterPos;
+  int iStatusWidths[] = {250, -1};
 
   ::GetClientRect(FormHWnd, &Rect);
 
@@ -198,6 +199,8 @@ void TagLeetForm::OnResize()
   ::SetWindowPos(StatusHWnd, NULL,
     0, Rect.bottom - StatusHeight, Rect.right, StatusHeight,
     SWP_NOZORDER);
+  iStatusWidths[0] = Rect.right/2;
+  ::SendMessage(StatusHWnd, SB_SETPARTS, 2, (LPARAM)iStatusWidths);
 
   ::SetWindowPos(LViewHWnd, NULL,
     0, 0, Rect.right, splitterPos,
