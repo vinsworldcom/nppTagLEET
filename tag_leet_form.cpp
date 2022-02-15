@@ -36,6 +36,7 @@ using namespace TagLEET_NPP;
 
 extern bool g_useNppColors;
 extern bool g_useSciAutoC;
+extern bool g_RecurseDirs;
 extern bool g_UpdateOnSave;
 extern int  g_PeekPre;
 extern int  g_PeekPost;
@@ -185,7 +186,7 @@ void TagLeetForm::OnResize()
   int StatusHeight = App->GetStatusHeight();
   int FocusIdx;
   int splitterPos = iSplitterPos;
-  int iStatusWidths[] = {250, -1};
+  int iStatusWidths[] = {250, 250, 20, 20, -1};
 
   ::GetClientRect(FormHWnd, &Rect);
 
@@ -199,8 +200,11 @@ void TagLeetForm::OnResize()
   ::SetWindowPos(StatusHWnd, NULL,
     0, Rect.bottom - StatusHeight, Rect.right, StatusHeight,
     SWP_NOZORDER);
-  iStatusWidths[0] = Rect.right/2;
-  ::SendMessage(StatusHWnd, SB_SETPARTS, 2, (LPARAM)iStatusWidths);
+  iStatusWidths[0] = Rect.right/2 - 30;
+  iStatusWidths[1] = iStatusWidths[0] + Rect.right/2 - 30;
+  iStatusWidths[2] = iStatusWidths[1] + 20;
+  iStatusWidths[3] = iStatusWidths[2] + 20;
+  ::SendMessage(StatusHWnd, SB_SETPARTS, 5, (LPARAM)iStatusWidths);
 
   ::SetWindowPos(LViewHWnd, NULL,
     0, 0, Rect.right, splitterPos,
@@ -331,7 +335,7 @@ TL_ERR TagLeetForm::CreateListView(HWND hwnd)
   HWND HdrHndl;
   int EditHeight;
   int LViewHeight;
-  int iStatusWidths[] = {250, -1};
+  int iStatusWidths[] = {250, 250, 20, 20, -1};
 
   hImgList = ImageList_LoadImage(App->GetInstance(),
     MAKEINTRESOURCE(IDR_ICONS),16,0,CLR_DEFAULT,IMAGE_BITMAP,LR_DEFAULTCOLOR);
@@ -352,8 +356,11 @@ TL_ERR TagLeetForm::CreateListView(HWND hwnd)
     hwnd, NULL, App->GetInstance(), NULL);
   if (StatusHWnd != NULL)
   {
-    iStatusWidths[0] = Rect.right/2;
-    ::SendMessage(StatusHWnd, SB_SETPARTS, 2, (LPARAM)iStatusWidths);
+    iStatusWidths[0] = Rect.right/2 - 30;
+    iStatusWidths[1] = iStatusWidths[0] + Rect.right/2 - 30;
+    iStatusWidths[2] = iStatusWidths[1] + 20;
+    iStatusWidths[3] = iStatusWidths[2] + 20;
+    ::SendMessage(StatusHWnd, SB_SETPARTS, 5, (LPARAM)iStatusWidths);
     if (StatusFont != NULL)
       ::PostMessage(StatusHWnd, WM_SETFONT, (WPARAM)StatusFont, (LPARAM)0);
   }
@@ -1111,6 +1118,15 @@ void TagLeetForm::UpdateStatusTagfile()
   else
       str_to_TSTR(TList.TagsFilePath, -1, TmpBuff, ARRAY_SIZE(TmpBuff));
   ::SendMessage(StatusHWnd, SB_SETTEXT, 1, (LPARAM)TmpBuff);
+
+  if (g_RecurseDirs)
+    ::SendMessage(StatusHWnd, SB_SETTEXT, 2, (LPARAM)TEXT("R"));
+  else
+    ::SendMessage(StatusHWnd, SB_SETTEXT, 2, (LPARAM)TEXT(""));
+  if (g_UpdateOnSave)
+    ::SendMessage(StatusHWnd, SB_SETTEXT, 3, (LPARAM)TEXT("S"));
+  else
+    ::SendMessage(StatusHWnd, SB_SETTEXT, 3, (LPARAM)TEXT(""));
 }
 
 void TagLeetForm::UpdateStatusText(std::wstring message)
