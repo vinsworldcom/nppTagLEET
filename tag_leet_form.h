@@ -93,6 +93,7 @@ private:
   UINT KindToIndex[TAG_KIND_LAST];
   bool DoPrefixMatch;
   bool DoAutoComplete;
+  bool UseGlobalTagsFile;
   uint8_t SortOrder[6];
   int LastMaxTagWidth;
   int LastMaxFilenameWidth;

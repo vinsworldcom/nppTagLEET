@@ -39,6 +39,7 @@ extern bool g_useSciAutoC;
 extern bool g_UpdateOnSave;
 extern int  g_PeekPre;
 extern int  g_PeekPost;
+extern char g_GlobalTagsFile[TL_MAX_PATH];
 
 #define SORT_UP_IMG_IDX    13
 #define SORT_DOWN_IMG_IDX  14
@@ -55,6 +56,7 @@ TagLeetForm::TagLeetForm(NppCallContext *NppC)
   EditHWnd = NULL;
   DoPrefixMatch = false;
   DoAutoComplete = false;
+  UseGlobalTagsFile = false;
   ::memset(&BackLoc, 0, sizeof(BackLoc));
   BackLocBank = NppC->LocBank;
 
@@ -1097,11 +1099,14 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 void TagLeetForm::UpdateStatusTagfile()
 {
   TCHAR TmpBuff[TL_MAX_PATH];
-  str_to_TSTR(TList.TagsFilePath, -1, TmpBuff, ARRAY_SIZE(TmpBuff));
 
   if (StatusHWnd == NULL)
     return;
 
+  if (UseGlobalTagsFile)
+      str_to_TSTR(g_GlobalTagsFile, -1, TmpBuff, ARRAY_SIZE(TmpBuff));
+  else
+      str_to_TSTR(TList.TagsFilePath, -1, TmpBuff, ARRAY_SIZE(TmpBuff));
   ::SendMessage(StatusHWnd, SB_SETTEXT, 1, (LPARAM)TmpBuff);
 }
 
@@ -1260,6 +1265,7 @@ TL_ERR TagLeetForm::PopulateTagList(TagLookupContext *TLCtx)
             err = PopulateTagListHelperGlobal(TLCtx, &tf);
             if (err)
                 return err;
+            UseGlobalTagsFile = true;
         }
         else
             return err;
@@ -1272,6 +1278,7 @@ TL_ERR TagLeetForm::PopulateTagList(TagLookupContext *TLCtx)
         err = PopulateTagListHelperGlobal(TLCtx, &tf);
         if (err)
             return err;
+        UseGlobalTagsFile = true;
     }
   }
 
