@@ -64,6 +64,7 @@ private:
   TagList::TagListItem *GetItemData(int ItemIdx);
   TL_ERR OpenTagLoc(TagList::TagListItem *Item);
   void UpdateEditView();
+  void UpdateStatusTagfile();
   void UpdateStatusText(std::wstring message);
   void UpdateStatusLine(int FocusIdx);
   static int CALLBACK LvSortFunc(LPARAM Item1Ptr, LPARAM Item2Ptr,
@@ -92,6 +93,7 @@ private:
   UINT KindToIndex[TAG_KIND_LAST];
   bool DoPrefixMatch;
   bool DoAutoComplete;
+  bool UseGlobalTagsFile;
   uint8_t SortOrder[6];
   int LastMaxTagWidth;
   int LastMaxFilenameWidth;
