@@ -35,6 +35,9 @@
 #define DEFAULT_SCREEN_HEIGHT 1024
 #define DEFAULT_FORM_WIDTH 700
 #define DEFAULT_FORM_HEIGHT 350
+#define DEFAULT_WAIT_TIME_MSEC 3000
+#define DEFAULT_PRE_LINES 2
+#define DEFAULT_POST_LINES 9
 
 using namespace TagLEET_NPP;
 
@@ -59,13 +62,15 @@ const TCHAR iniRecurseDirs[]    = TEXT( "RecurseSubDirs" );
 const TCHAR iniPeekPre[]        = TEXT( "PeekPre" );
 const TCHAR iniPeekPost[]       = TEXT( "PeekPost" );
 const TCHAR iniGlobalTagsFile[] = TEXT( "GlobalTagsFile" );
+const TCHAR iniWaitTimeMsec[]   = TEXT( "WaitTimeMsec" );
 
 bool g_useNppColors = false;
 bool g_useSciAutoC  = true;
 bool g_UpdateOnSave = false;
 bool g_RecurseDirs  = true;
-int  g_PeekPre      = 2;
-int  g_PeekPost     = 9;
+int  g_PeekPre      = DEFAULT_PRE_LINES;
+int  g_PeekPost     = DEFAULT_POST_LINES;
+int  g_WaitTimeMsec = DEFAULT_WAIT_TIME_MSEC;
 char g_GlobalTagsFile[TL_MAX_PATH];
 
 #define STR_HELPER(x) #x
@@ -169,7 +174,7 @@ void CreateTagsDb(HWND NppHndl, NppCallContext *NppC, char *TagsFilePath)
     strArgs += ws2s(path);
   }
 
-  DWORD err;
+  DWORD err, errw = 0;
   SHELLEXECUTEINFOA ShExecInfo = {0};
   ShExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
   ShExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
@@ -181,12 +186,12 @@ void CreateTagsDb(HWND NppHndl, NppCallContext *NppC, char *TagsFilePath)
   ShExecInfo.nShow = SW_HIDE;
   ShExecInfo.hInstApp = NULL;
   ShellExecuteExA(&ShExecInfo);
-  WaitForSingleObject(ShExecInfo.hProcess,5000);
+  errw = WaitForSingleObject(ShExecInfo.hProcess, g_WaitTimeMsec);
   GetExitCodeProcess(ShExecInfo.hProcess, &err);
-  if ( err != 0 )
+  if ( err != 0 && err != STILL_ACTIVE )
   {
-      std::string errMsg;
-      errMsg = strModuleFileName;
+      std::string errMsg = "[" + std::to_string(errw) + "] ";
+      errMsg += strModuleFileName;
       errMsg += " ";
       errMsg += strArgs;
       errMsg += " ";
@@ -304,10 +309,12 @@ TagLeetApp::TagLeetApp(const struct NppData *NppDataObj)
                    iniFilePath );
   g_RecurseDirs  = ::GetPrivateProfileInt( sectionName, iniRecurseDirs, 1,
                    iniFilePath );
-  g_PeekPre      = ::GetPrivateProfileInt( sectionName, iniPeekPre, 2,
-                   iniFilePath );
-  g_PeekPost     = ::GetPrivateProfileInt( sectionName, iniPeekPost, 9,
-                   iniFilePath );
+  g_PeekPre      = ::GetPrivateProfileInt( sectionName, iniPeekPre, 
+                   DEFAULT_PRE_LINES, iniFilePath );
+  g_PeekPost     = ::GetPrivateProfileInt( sectionName, iniPeekPost, 
+                   DEFAULT_POST_LINES, iniFilePath );
+  g_WaitTimeMsec = ::GetPrivateProfileInt( sectionName, iniWaitTimeMsec, 
+                   DEFAULT_WAIT_TIME_MSEC, iniFilePath );
   TCHAR globalTagsFile[TL_MAX_PATH];
   ::GetPrivateProfileString( sectionName, iniGlobalTagsFile, TEXT("\0"), 
                              globalTagsFile, MAX_PATH, iniFilePath );
@@ -368,6 +375,8 @@ void TagLeetApp::Shutdown()
   ::WritePrivateProfileString( sectionName, iniPeekPre, buf, iniFilePath );
   _itot_s( g_PeekPost, buf, 64, 10 );
   ::WritePrivateProfileString( sectionName, iniPeekPost, buf, iniFilePath );
+  _itot_s( g_WaitTimeMsec, buf, 64, 10 );
+  ::WritePrivateProfileString( sectionName, iniWaitTimeMsec, buf, iniFilePath );
 
   TCHAR globalTagsFile[TL_MAX_PATH];
   size_t nNumCharConverted;
