@@ -10,4 +10,4 @@ Release
 tags
 bin/*
 bin64/*
-
+arm64/*
