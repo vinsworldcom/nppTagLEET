@@ -10,7 +10,7 @@ jobs:
       max-parallel: 6
       matrix:
         build_configuration: [Release, Debug]
-        build_platform: [x64, Win32, ARM64]
+        build_platform: [x64, Win32]
 
     steps:
     - name: Checkout repo
@@ -39,12 +39,12 @@ jobs:
           name: TagLEET-Win32
           path: bin\TagLEET.dll
 
-    - name: Archive artifacts for ARM64
-      if: matrix.build_platform == 'ARM64' && matrix.build_configuration == 'Release'
-      uses: actions/upload-artifact@v3
-      with:
-          name: TagLEET-arm64
-          path: arm64\TagLEET.dll
+    # - name: Archive artifacts for ARM64
+      # if: matrix.build_platform == 'ARM64' && matrix.build_configuration == 'Release'
+      # uses: actions/upload-artifact@v3
+      # with:
+          # name: TagLEET-arm64
+          # path: arm64\TagLEET.dll
 
     - name: Release for x64
       uses: softprops/action-gh-release@v1
@@ -62,10 +62,10 @@ jobs:
           files: bin\TagLEET-v${{ github.ref_name }}-Win32.zip
           prerelease: true
 
-    - name: Release for ARM64
-      uses: softprops/action-gh-release@v1
-      if: startsWith(github.ref, 'refs/tags/') && matrix.build_platform == 'ARM64' && matrix.build_configuration == 'Release'
-      with:
-          body: ${{ github.event.commits[0].message }}
-          files: arm64\TagLEET-v${{ github.ref_name }}-arm64.zip
-          prerelease: true
+    # - name: Release for ARM64
+      # uses: softprops/action-gh-release@v1
+      # if: startsWith(github.ref, 'refs/tags/') && matrix.build_platform == 'ARM64' && matrix.build_configuration == 'Release'
+      # with:
+          # body: ${{ github.event.commits[0].message }}
+          # files: arm64\TagLEET-v${{ github.ref_name }}-arm64.zip
+          # prerelease: true
