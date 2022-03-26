@@ -25,16 +25,16 @@ jobs:
       env:
           ZIPCMD: 7z a -tzip
 
-    - name: Archive artifacts
+    - name: Archive
       uses: actions/upload-artifact@v3
       with:
-          name: TagLEET-${{ matrix.build_platform }}
-          path: ${{ matrix.build_platform }}\TagLEET.dll
+          name: TagLEET-${{ matrix.build_configuration }}-${{ matrix.build_platform }}
+          path: ${{ matrix.build_configuration }}\${{ matrix.build_platform }}\TagLEET.dll
 
     - name: Release
       uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/') && matrix.build_configuration == 'Release'
       with:
           body: ${{ github.event.commits[0].message }}
-          files: ${{ matrix.build_platform }}\TagLEET-v${{ github.ref_name }}-${{ matrix.build_platform }}.zip
+          files: ${{ matrix.build_configuration }}\${{ matrix.build_platform }}\TagLEET-v${{ github.ref_name }}-${{ matrix.build_platform }}.zip
           prerelease: true
