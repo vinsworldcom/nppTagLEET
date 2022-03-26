@@ -25,47 +25,20 @@ jobs:
       env:
           ZIPCMD: 7z a -tzip
 
-    - name: Archive artifacts for x64
-      if: matrix.build_platform == 'x64' && matrix.build_configuration == 'Release'
+    - name: Archive
       uses: actions/upload-artifact@v3
       with:
-          name: TagLEET-x64
-          path: bin64\TagLEET.dll
+          name: TagLEET-${{ matrix.build_configuration }}-${{ matrix.build_platform }}
+          path: ${{ matrix.build_configuration }}\${{ matrix.build_platform }}\TagLEET.dll
 
-    - name: Archive artifacts for Win32
-      if: matrix.build_platform == 'Win32' && matrix.build_configuration == 'Release'
-      uses: actions/upload-artifact@v3
-      with:
-          name: TagLEET-Win32
-          path: bin\TagLEET.dll
-
-    # - name: Archive artifacts for ARM64
-      # if: matrix.build_platform == 'ARM64' && matrix.build_configuration == 'Release'
-      # uses: actions/upload-artifact@v3
-      # with:
-          # name: TagLEET-arm64
-          # path: arm64\TagLEET.dll
-
-    - name: Release for x64
+    - name: Release
       uses: softprops/action-gh-release@v1
-      if: startsWith(github.ref, 'refs/tags/') && matrix.build_platform == 'x64' && matrix.build_configuration == 'Release'
+      if: startsWith(github.ref, 'refs/tags/') && matrix.build_configuration == 'Release'
       with:
           body: ${{ github.event.commits[0].message }}
-          files: bin64\TagLEET-v${{ github.ref_name }}-x64.zip
+          files: ${{ matrix.build_configuration }}\${{ matrix.build_platform }}\TagLEET-v${{ github.ref_name }}-${{ matrix.build_platform }}.zip
           prerelease: true
 
-    - name: Release for Win32
-      uses: softprops/action-gh-release@v1
-      if: startsWith(github.ref, 'refs/tags/') && matrix.build_platform == 'Win32' && matrix.build_configuration == 'Release'
-      with:
-          body: ${{ github.event.commits[0].message }}
-          files: bin\TagLEET-v${{ github.ref_name }}-Win32.zip
-          prerelease: true
-
-    # - name: Release for ARM64
-      # uses: softprops/action-gh-release@v1
-      # if: startsWith(github.ref, 'refs/tags/') && matrix.build_platform == 'ARM64' && matrix.build_configuration == 'Release'
-      # with:
-          # body: ${{ github.event.commits[0].message }}
-          # files: arm64\TagLEET-v${{ github.ref_name }}-arm64.zip
-          # prerelease: true
+    - name: SHA256
+      if: startsWith(github.ref, 'refs/tags/') && matrix.build_configuration == 'Release'
+      run: sha256sum.exe ${{ matrix.build_configuration }}\${{ matrix.build_platform }}\TagLEET-v${{ github.ref_name }}-${{ matrix.build_platform }}.zip
