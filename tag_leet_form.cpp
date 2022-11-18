@@ -1033,8 +1033,8 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
                   SetNppColors();
                   g_useNppColors = true;
                 }
+                ChangeColors();
               }
-              ChangeColors();
               break;
             case VK_DIVIDE:
               if (::GetKeyState(VK_CONTROL) & 0x8000)
