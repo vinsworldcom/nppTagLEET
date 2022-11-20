@@ -981,6 +981,7 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
               else
               {
                 ResizeForm(10);
+                return true; //remove beep
               }
               break;
             case VK_SUBTRACT:
@@ -992,6 +993,7 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
               else
               {
                 ResizeForm(-10);
+                return true; //remove beep
               }
               break;
             case VK_MULTIPLY:
@@ -1034,6 +1036,7 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
                   g_useNppColors = true;
                 }
                 ChangeColors();
+                return true; //remove beep
               }
               break;
             case VK_DIVIDE:
@@ -1046,6 +1049,7 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
               {
                 App->SetFormSize(0, 0, true);
                 ResizeForm(0);
+                return true; //remove beep
               }
               break;
             case VK_ESCAPE:
