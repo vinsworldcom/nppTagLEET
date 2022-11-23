@@ -85,7 +85,7 @@ CTRL + NUMPAD(+)       | increase font size
 CTRL + NUMPAD(-)       | decrease font size
 CTRL + NUMPAD(/)       | reset font size
 NUMPAD(*)              | toggle default / N++ colors
-CTRL + NUMPAD(*)       | toggle Scintilla Autocomplete
+ALT + A                | toggle Scintilla Autocomplete
 ALT + R                | toggle Recurse Subdirectories
 ALT + S                | toggle Update on Save
 

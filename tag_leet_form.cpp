@@ -182,14 +182,15 @@ TL_ERR TagLeetForm::CreateWnd(TagLookupContext *TLCtx)
 
 void TagLeetForm::StatusbarInit(RECT Rect)
 {
-    int iStatusWidths[] = {240, 240, 20, 20, 20, -1};
+    int iStatusWidths[] = {230, 230, 20, 20, 20, 20, -1};
 
-    iStatusWidths[0] = Rect.right/2 - 40;
-    iStatusWidths[1] = iStatusWidths[0] + Rect.right/2 - 40;
+    iStatusWidths[0] = Rect.right/2 - 50;
+    iStatusWidths[1] = iStatusWidths[0] + Rect.right/2 - 50;
     iStatusWidths[2] = iStatusWidths[1] + 20;
     iStatusWidths[3] = iStatusWidths[2] + 20;
     iStatusWidths[4] = iStatusWidths[3] + 20;
-    ::SendMessage(StatusHWnd, SB_SETPARTS, 6, (LPARAM)iStatusWidths);
+    iStatusWidths[5] = iStatusWidths[4] + 20;
+    ::SendMessage(StatusHWnd, SB_SETPARTS, 7, (LPARAM)iStatusWidths);
 }
 
 void TagLeetForm::OnResize()
@@ -998,6 +999,22 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
                 return true; //remove beep
               }
               break;
+            case 0X41: // A Key
+              if (::GetKeyState(VK_MENU) & 0x8000)
+              {
+                if ( g_useSciAutoC )
+                {
+                  g_useSciAutoC = false;
+                  UpdateStatusText(TEXT("Scintilla Autocomplete DISabled"));
+                }
+                else
+                {
+                  g_useSciAutoC = true;
+                  UpdateStatusText(TEXT("Scintilla Autocomplete ENabled"));
+                }
+              }
+              return true; //remove beep (doesn't work here - ALT key?)
+              break;
             case 0x52: // R key
               if (::GetKeyState(VK_MENU) & 0x8000)
               {
@@ -1031,34 +1048,18 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
               return true; //remove beep (doesn't work here - ALT key?)
               break;
             case VK_MULTIPLY:
-              if (::GetKeyState(VK_CONTROL) & 0x8000)
+              if ( g_useNppColors )
               {
-                if ( g_useSciAutoC )
-                {
-                  g_useSciAutoC = false;
-                  UpdateStatusText(TEXT("Scintilla Autocomplete DISabled"));
-                }
-                else
-                {
-                  g_useSciAutoC = true;
-                  UpdateStatusText(TEXT("Scintilla Autocomplete ENabled"));
-                }
+                SetSysColors();
+                g_useNppColors = false;
               }
               else
               {
-                if ( g_useNppColors )
-                {
-                  SetSysColors();
-                  g_useNppColors = false;
-                }
-                else
-                {
-                  SetNppColors();
-                  g_useNppColors = true;
-                }
-                ChangeColors();
-                return true; //remove beep
+                SetNppColors();
+                g_useNppColors = true;
               }
+              ChangeColors();
+              return true; //remove beep
               break;
             case VK_DIVIDE:
               if (::GetKeyState(VK_CONTROL) & 0x8000)
@@ -1148,14 +1149,18 @@ void TagLeetForm::UpdateStatusTagfile()
     ::SendMessage(StatusHWnd, SB_SETTEXT, 2, (LPARAM)TEXT("G"));
   else
     ::SendMessage(StatusHWnd, SB_SETTEXT, 2, (LPARAM)TEXT(""));
-  if (g_RecurseDirs)
-    ::SendMessage(StatusHWnd, SB_SETTEXT, 3, (LPARAM)TEXT("R"));
+  if (g_useSciAutoC)
+    ::SendMessage(StatusHWnd, SB_SETTEXT, 3, (LPARAM)TEXT("A"));
   else
     ::SendMessage(StatusHWnd, SB_SETTEXT, 3, (LPARAM)TEXT(""));
-  if (g_UpdateOnSave)
-    ::SendMessage(StatusHWnd, SB_SETTEXT, 4, (LPARAM)TEXT("S"));
+  if (g_RecurseDirs)
+    ::SendMessage(StatusHWnd, SB_SETTEXT, 4, (LPARAM)TEXT("R"));
   else
     ::SendMessage(StatusHWnd, SB_SETTEXT, 4, (LPARAM)TEXT(""));
+  if (g_UpdateOnSave)
+    ::SendMessage(StatusHWnd, SB_SETTEXT, 5, (LPARAM)TEXT("S"));
+  else
+    ::SendMessage(StatusHWnd, SB_SETTEXT, 5, (LPARAM)TEXT(""));
 }
 
 void TagLeetForm::UpdateStatusText(std::wstring message)
