@@ -180,13 +180,24 @@ TL_ERR TagLeetForm::CreateWnd(TagLookupContext *TLCtx)
   return TL_ERR_OK;
 }
 
+void TagLeetForm::StatusbarInit(RECT Rect)
+{
+    int iStatusWidths[] = {240, 240, 20, 20, 20, -1};
+
+    iStatusWidths[0] = Rect.right/2 - 40;
+    iStatusWidths[1] = iStatusWidths[0] + Rect.right/2 - 40;
+    iStatusWidths[2] = iStatusWidths[1] + 20;
+    iStatusWidths[3] = iStatusWidths[2] + 20;
+    iStatusWidths[4] = iStatusWidths[3] + 20;
+    ::SendMessage(StatusHWnd, SB_SETPARTS, 6, (LPARAM)iStatusWidths);
+}
+
 void TagLeetForm::OnResize()
 {
   RECT Rect;
   int StatusHeight = App->GetStatusHeight();
   int FocusIdx;
   int splitterPos = iSplitterPos;
-  int iStatusWidths[] = {240, 240, 20, 20, 20, -1};
 
   ::GetClientRect(FormHWnd, &Rect);
 
@@ -200,12 +211,7 @@ void TagLeetForm::OnResize()
   ::SetWindowPos(StatusHWnd, NULL,
     0, Rect.bottom - StatusHeight, Rect.right, StatusHeight,
     SWP_NOZORDER);
-  iStatusWidths[0] = Rect.right/2 - 40;
-  iStatusWidths[1] = iStatusWidths[0] + Rect.right/2 - 40;
-  iStatusWidths[2] = iStatusWidths[1] + 20;
-  iStatusWidths[3] = iStatusWidths[2] + 20;
-  iStatusWidths[4] = iStatusWidths[3] + 20;
-  ::SendMessage(StatusHWnd, SB_SETPARTS, 6, (LPARAM)iStatusWidths);
+  StatusbarInit(Rect);
 
   ::SetWindowPos(LViewHWnd, NULL,
     0, 0, Rect.right, splitterPos,
@@ -336,7 +342,6 @@ TL_ERR TagLeetForm::CreateListView(HWND hwnd)
   HWND HdrHndl;
   int EditHeight;
   int LViewHeight;
-  int iStatusWidths[] = {240, 240, 20, 20, 20, -1};
 
   hImgList = ImageList_LoadImage(App->GetInstance(),
     MAKEINTRESOURCE(IDR_ICONS),16,0,CLR_DEFAULT,IMAGE_BITMAP,LR_DEFAULTCOLOR);
@@ -357,18 +362,13 @@ TL_ERR TagLeetForm::CreateListView(HWND hwnd)
     hwnd, NULL, App->GetInstance(), NULL);
   if (StatusHWnd != NULL)
   {
-    iStatusWidths[0] = Rect.right/2 - 40;
-    iStatusWidths[1] = iStatusWidths[0] + Rect.right/2 - 40;
-    iStatusWidths[2] = iStatusWidths[1] + 20;
-    iStatusWidths[3] = iStatusWidths[2] + 20;
-    iStatusWidths[4] = iStatusWidths[3] + 20;
-    ::SendMessage(StatusHWnd, SB_SETPARTS, 6, (LPARAM)iStatusWidths);
+    StatusbarInit(Rect);
     if (StatusFont != NULL)
       ::PostMessage(StatusHWnd, WM_SETFONT, (WPARAM)StatusFont, (LPARAM)0);
   }
 
   LViewHWnd = ::CreateWindowEx(WS_EX_CLIENTEDGE, WC_LISTVIEW, NULL,
-    WS_CHILD | LVS_REPORT | LVS_SINGLESEL | WS_VISIBLE,
+    WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | WS_VISIBLE,
     0, 0, Rect.right, LViewHeight,
     hwnd, NULL, App->GetInstance(), NULL);
   if (LViewHWnd == NULL)
@@ -1036,12 +1036,12 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
                 if ( g_useSciAutoC )
                 {
                   g_useSciAutoC = false;
-                  UpdateStatusText(TEXT("Do NOT Use Scintilla Autocomplete"));
+                  UpdateStatusText(TEXT("Scintilla Autocomplete DISabled"));
                 }
                 else
                 {
                   g_useSciAutoC = true;
-                  UpdateStatusText(TEXT("Use Scintilla Autocomplete"));
+                  UpdateStatusText(TEXT("Scintilla Autocomplete ENabled"));
                 }
               }
               else

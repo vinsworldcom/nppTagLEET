@@ -77,6 +77,7 @@ private:
   void SetSysColors();
   void ChangeColors();
   void OnResize();
+  void StatusbarInit(RECT Rect);
 
   LRESULT editWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
   static LRESULT CALLBACK wndDefaultEditProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
