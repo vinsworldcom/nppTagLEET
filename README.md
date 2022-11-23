@@ -85,8 +85,9 @@ CTRL + NUMPAD(+)       | increase font size
 CTRL + NUMPAD(-)       | decrease font size
 CTRL + NUMPAD(/)       | reset font size
 NUMPAD(*)              | toggle default / N++ colors
-CTRL + NUMPAD(*)       | toggle Scintilla autocomplete
-CTRL + ALT + NUMPAD(*) | toggle update on save
+CTRL + NUMPAD(*)       | toggle Scintilla Autocomplete
+ALT + R                | toggle Recurse Subdirectories
+ALT + S                | toggle Update on Save
 
 Update on save will auto update the current `tags` file after each file save.
 This does not take too much extra resources and makes the TagLEET experience 

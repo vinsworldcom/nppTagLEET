@@ -998,8 +998,24 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
                 return true; //remove beep
               }
               break;
-            case VK_MULTIPLY:
-              if (::GetKeyState(VK_CONTROL) & 0x8000 && ::GetKeyState(VK_MENU) & 0x8000)
+            case 0x52: // R key
+              if (::GetKeyState(VK_MENU) & 0x8000)
+              {
+                if ( g_RecurseDirs )
+                {
+                  g_RecurseDirs = false;
+                  UpdateStatusText(TEXT("Recurse Subdirectories DISabled"));
+                }
+                else
+                {
+                  g_RecurseDirs = true;
+                  UpdateStatusText(TEXT("Recurse Subdirectories ENabled"));
+                }
+              }
+              return true; //remove beep (doesn't work here - ALT key?)
+              break;
+            case 0x53: // S key
+              if (::GetKeyState(VK_MENU) & 0x8000)
               {
                 if ( g_UpdateOnSave )
                 {
@@ -1012,7 +1028,10 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
                   UpdateStatusText(TEXT("Update on Save ENabled"));
                 }
               }
-              else if (::GetKeyState(VK_CONTROL) & 0x8000)
+              return true; //remove beep (doesn't work here - ALT key?)
+              break;
+            case VK_MULTIPLY:
+              if (::GetKeyState(VK_CONTROL) & 0x8000)
               {
                 if ( g_useSciAutoC )
                 {
