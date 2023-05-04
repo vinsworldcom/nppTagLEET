@@ -229,7 +229,7 @@ void SetTagsFilePath(HWND NppHndl, NppCallContext *NppC, char *TagsFilePath)
   TCHAR Msg[2048];
 
   ::_sntprintf(Msg, ARRAY_SIZE(Msg),
-    TEXT("'tags' file not found on path of:\n%s\n\nCreate recursively? (No = Current file only)"), NppC->Path);
+    TEXT("'tags' file not found on path of:\n%s\n\nYES = Create recursively\nNO = Current file only\nCANCEL = do nothing"), NppC->Path);
   int response = ::MessageBox(NppHndl, Msg, TEXT("TagLEET"), MB_YESNOCANCEL | MB_ICONWARNING);
   if (response == IDYES)
   {
