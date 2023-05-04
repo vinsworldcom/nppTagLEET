@@ -405,7 +405,7 @@ TagLookupContext::TagLookupContext(NppCallContext *in_NppC,
 {
   bool NewSelection = false;
   int Start, End;
-  Sci_TextRange tr;
+  Sci_TextRangeFull tr;
 
   Start = (int)NppC->SciMsg(SCI_GETSELECTIONSTART);
   End = (int)NppC->SciMsg(SCI_GETSELECTIONEND);
@@ -440,7 +440,7 @@ TagLookupContext::TagLookupContext(NppCallContext *in_NppC,
   tr.chrg.cpMin = Start;
   tr.chrg.cpMax = Start + TextLength;
   tr.lpstrText = TextBuff;
-  TextLength = (int)NppC->SciMsg(SCI_GETTEXTRANGE, 0, (LPARAM)&tr);
+  TextLength = (int)NppC->SciMsg(SCI_GETTEXTRANGEFULL, 0, (LPARAM)&tr);
   TagOffset = 0;
   TagLength = End - Start;
 }

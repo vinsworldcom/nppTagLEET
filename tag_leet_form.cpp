@@ -180,13 +180,25 @@ TL_ERR TagLeetForm::CreateWnd(TagLookupContext *TLCtx)
   return TL_ERR_OK;
 }
 
+void TagLeetForm::StatusbarInit(RECT Rect)
+{
+    int iStatusWidths[] = {230, 230, 20, 20, 20, 20, -1};
+
+    iStatusWidths[0] = Rect.right/2 - 50;
+    iStatusWidths[1] = iStatusWidths[0] + Rect.right/2 - 50;
+    iStatusWidths[2] = iStatusWidths[1] + 20;
+    iStatusWidths[3] = iStatusWidths[2] + 20;
+    iStatusWidths[4] = iStatusWidths[3] + 20;
+    iStatusWidths[5] = iStatusWidths[4] + 20;
+    ::SendMessage(StatusHWnd, SB_SETPARTS, 7, (LPARAM)iStatusWidths);
+}
+
 void TagLeetForm::OnResize()
 {
   RECT Rect;
   int StatusHeight = App->GetStatusHeight();
   int FocusIdx;
   int splitterPos = iSplitterPos;
-  int iStatusWidths[] = {250, 250, 20, 20, -1};
 
   ::GetClientRect(FormHWnd, &Rect);
 
@@ -200,11 +212,7 @@ void TagLeetForm::OnResize()
   ::SetWindowPos(StatusHWnd, NULL,
     0, Rect.bottom - StatusHeight, Rect.right, StatusHeight,
     SWP_NOZORDER);
-  iStatusWidths[0] = Rect.right/2 - 30;
-  iStatusWidths[1] = iStatusWidths[0] + Rect.right/2 - 30;
-  iStatusWidths[2] = iStatusWidths[1] + 20;
-  iStatusWidths[3] = iStatusWidths[2] + 20;
-  ::SendMessage(StatusHWnd, SB_SETPARTS, 5, (LPARAM)iStatusWidths);
+  StatusbarInit(Rect);
 
   ::SetWindowPos(LViewHWnd, NULL,
     0, 0, Rect.right, splitterPos,
@@ -335,7 +343,6 @@ TL_ERR TagLeetForm::CreateListView(HWND hwnd)
   HWND HdrHndl;
   int EditHeight;
   int LViewHeight;
-  int iStatusWidths[] = {250, 250, 20, 20, -1};
 
   hImgList = ImageList_LoadImage(App->GetInstance(),
     MAKEINTRESOURCE(IDR_ICONS),16,0,CLR_DEFAULT,IMAGE_BITMAP,LR_DEFAULTCOLOR);
@@ -356,17 +363,13 @@ TL_ERR TagLeetForm::CreateListView(HWND hwnd)
     hwnd, NULL, App->GetInstance(), NULL);
   if (StatusHWnd != NULL)
   {
-    iStatusWidths[0] = Rect.right/2 - 30;
-    iStatusWidths[1] = iStatusWidths[0] + Rect.right/2 - 30;
-    iStatusWidths[2] = iStatusWidths[1] + 20;
-    iStatusWidths[3] = iStatusWidths[2] + 20;
-    ::SendMessage(StatusHWnd, SB_SETPARTS, 5, (LPARAM)iStatusWidths);
+    StatusbarInit(Rect);
     if (StatusFont != NULL)
       ::PostMessage(StatusHWnd, WM_SETFONT, (WPARAM)StatusFont, (LPARAM)0);
   }
 
   LViewHWnd = ::CreateWindowEx(WS_EX_CLIENTEDGE, WC_LISTVIEW, NULL,
-    WS_CHILD | LVS_REPORT | LVS_SINGLESEL | WS_VISIBLE,
+    WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | WS_VISIBLE,
     0, 0, Rect.right, LViewHeight,
     hwnd, NULL, App->GetInstance(), NULL);
   if (LViewHWnd == NULL)
@@ -981,6 +984,7 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
               else
               {
                 ResizeForm(10);
+                return true; //remove beep
               }
               break;
             case VK_SUBTRACT:
@@ -992,10 +996,43 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
               else
               {
                 ResizeForm(-10);
+                return true; //remove beep
               }
               break;
-            case VK_MULTIPLY:
-              if (::GetKeyState(VK_CONTROL) & 0x8000 && ::GetKeyState(VK_MENU) & 0x8000)
+            case 0X41: // A Key
+              if (::GetKeyState(VK_MENU) & 0x8000)
+              {
+                if ( g_useSciAutoC )
+                {
+                  g_useSciAutoC = false;
+                  UpdateStatusText(TEXT("Scintilla Autocomplete DISabled"));
+                }
+                else
+                {
+                  g_useSciAutoC = true;
+                  UpdateStatusText(TEXT("Scintilla Autocomplete ENabled"));
+                }
+              }
+              return true; //remove beep (doesn't work here - ALT key?)
+              break;
+            case 0x52: // R key
+              if (::GetKeyState(VK_MENU) & 0x8000)
+              {
+                if ( g_RecurseDirs )
+                {
+                  g_RecurseDirs = false;
+                  UpdateStatusText(TEXT("Recurse Subdirectories DISabled"));
+                }
+                else
+                {
+                  g_RecurseDirs = true;
+                  UpdateStatusText(TEXT("Recurse Subdirectories ENabled"));
+                }
+              }
+              return true; //remove beep (doesn't work here - ALT key?)
+              break;
+            case 0x53: // S key
+              if (::GetKeyState(VK_MENU) & 0x8000)
               {
                 if ( g_UpdateOnSave )
                 {
@@ -1008,33 +1045,21 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
                   UpdateStatusText(TEXT("Update on Save ENabled"));
                 }
               }
-              else if (::GetKeyState(VK_CONTROL) & 0x8000)
+              return true; //remove beep (doesn't work here - ALT key?)
+              break;
+            case VK_MULTIPLY:
+              if ( g_useNppColors )
               {
-                if ( g_useSciAutoC )
-                {
-                  g_useSciAutoC = false;
-                  UpdateStatusText(TEXT("Do NOT Use Scintilla Autocomplete"));
-                }
-                else
-                {
-                  g_useSciAutoC = true;
-                  UpdateStatusText(TEXT("Use Scintilla Autocomplete"));
-                }
+                SetSysColors();
+                g_useNppColors = false;
               }
               else
               {
-                if ( g_useNppColors )
-                {
-                  SetSysColors();
-                  g_useNppColors = false;
-                }
-                else
-                {
-                  SetNppColors();
-                  g_useNppColors = true;
-                }
+                SetNppColors();
+                g_useNppColors = true;
               }
               ChangeColors();
+              return true; //remove beep
               break;
             case VK_DIVIDE:
               if (::GetKeyState(VK_CONTROL) & 0x8000)
@@ -1046,6 +1071,7 @@ LRESULT TagLeetForm::WndProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
               {
                 App->SetFormSize(0, 0, true);
                 ResizeForm(0);
+                return true; //remove beep
               }
               break;
             case VK_ESCAPE:
@@ -1119,14 +1145,22 @@ void TagLeetForm::UpdateStatusTagfile()
       str_to_TSTR(TList.TagsFilePath, -1, TmpBuff, ARRAY_SIZE(TmpBuff));
   ::SendMessage(StatusHWnd, SB_SETTEXT, 1, (LPARAM)TmpBuff);
 
-  if (g_RecurseDirs)
-    ::SendMessage(StatusHWnd, SB_SETTEXT, 2, (LPARAM)TEXT("R"));
+  if (g_GlobalTagsFile[0] != '\0')
+    ::SendMessage(StatusHWnd, SB_SETTEXT, 2, (LPARAM)TEXT("G"));
   else
     ::SendMessage(StatusHWnd, SB_SETTEXT, 2, (LPARAM)TEXT(""));
-  if (g_UpdateOnSave)
-    ::SendMessage(StatusHWnd, SB_SETTEXT, 3, (LPARAM)TEXT("S"));
+  if (g_useSciAutoC)
+    ::SendMessage(StatusHWnd, SB_SETTEXT, 3, (LPARAM)TEXT("A"));
   else
     ::SendMessage(StatusHWnd, SB_SETTEXT, 3, (LPARAM)TEXT(""));
+  if (g_RecurseDirs)
+    ::SendMessage(StatusHWnd, SB_SETTEXT, 4, (LPARAM)TEXT("R"));
+  else
+    ::SendMessage(StatusHWnd, SB_SETTEXT, 4, (LPARAM)TEXT(""));
+  if (g_UpdateOnSave)
+    ::SendMessage(StatusHWnd, SB_SETTEXT, 5, (LPARAM)TEXT("S"));
+  else
+    ::SendMessage(StatusHWnd, SB_SETTEXT, 5, (LPARAM)TEXT(""));
 }
 
 void TagLeetForm::UpdateStatusText(std::wstring message)

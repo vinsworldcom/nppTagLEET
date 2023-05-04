@@ -1,7 +1,7 @@
 #define IDR_ICONS   101
 
-#define VERSION_WORDS    1,3,10,1
-#define VERSION_TAGLEET "1.3.10.1"
+#define VERSION_WORDS    1,4,1,1
+#define VERSION_TAGLEET "1.4.1.1"
 
 #ifndef IDC_STATIC
 #define IDC_STATIC  -1

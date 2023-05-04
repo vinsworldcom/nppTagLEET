@@ -35,6 +35,9 @@
 #define DEFAULT_SCREEN_HEIGHT 1024
 #define DEFAULT_FORM_WIDTH 700
 #define DEFAULT_FORM_HEIGHT 350
+#define DEFAULT_WAIT_TIME_MSEC 10000
+#define DEFAULT_PRE_LINES 2
+#define DEFAULT_POST_LINES 9
 
 using namespace TagLEET_NPP;
 
@@ -59,13 +62,15 @@ const TCHAR iniRecurseDirs[]    = TEXT( "RecurseSubDirs" );
 const TCHAR iniPeekPre[]        = TEXT( "PeekPre" );
 const TCHAR iniPeekPost[]       = TEXT( "PeekPost" );
 const TCHAR iniGlobalTagsFile[] = TEXT( "GlobalTagsFile" );
+const TCHAR iniWaitTimeMsec[]   = TEXT( "WaitTimeMsec" );
 
 bool g_useNppColors = false;
 bool g_useSciAutoC  = true;
 bool g_UpdateOnSave = false;
 bool g_RecurseDirs  = true;
-int  g_PeekPre      = 2;
-int  g_PeekPost     = 9;
+int  g_PeekPre      = DEFAULT_PRE_LINES;
+int  g_PeekPost     = DEFAULT_POST_LINES;
+int  g_WaitTimeMsec = DEFAULT_WAIT_TIME_MSEC;
 char g_GlobalTagsFile[TL_MAX_PATH];
 
 #define STR_HELPER(x) #x
@@ -150,6 +155,15 @@ static int __stdcall BrowseCallbackProc(HWND hwnd, UINT uMsg, LPARAM, LPARAM pDa
   return 0;
 }
 
+DWORD WINAPI ShExecCtags(LPVOID lpParam)
+{
+  LPSHELLEXECUTEINFOA lpShExecInfo;
+  lpShExecInfo = (LPSHELLEXECUTEINFOA)lpParam;
+
+  ShellExecuteExA(lpShExecInfo);
+  return 0;
+}
+
 void CreateTagsDb(HWND NppHndl, NppCallContext *NppC, char *TagsFilePath)
 {
   char moduleFileName[MAX_PATH];
@@ -169,30 +183,44 @@ void CreateTagsDb(HWND NppHndl, NppCallContext *NppC, char *TagsFilePath)
     strArgs += ws2s(path);
   }
 
-  DWORD err;
-  SHELLEXECUTEINFOA ShExecInfo = {0};
-  ShExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
-  ShExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
-  ShExecInfo.hwnd = NULL;
-  ShExecInfo.lpVerb = NULL;
-  ShExecInfo.lpFile = strModuleFileName.c_str();
-  ShExecInfo.lpParameters = strArgs.c_str();
-  ShExecInfo.lpDirectory = TagsFilePath;
-  ShExecInfo.nShow = SW_HIDE;
-  ShExecInfo.hInstApp = NULL;
-  ShellExecuteExA(&ShExecInfo);
-  WaitForSingleObject(ShExecInfo.hProcess,5000);
-  GetExitCodeProcess(ShExecInfo.hProcess, &err);
-  if ( err != 0 )
+  DWORD err, errw = 0;
+  LPSHELLEXECUTEINFOA lpShExecInfo;
+  lpShExecInfo = (LPSHELLEXECUTEINFOA) HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(SHELLEXECUTEINFOA));
+
+  lpShExecInfo->cbSize = sizeof(SHELLEXECUTEINFO);
+  lpShExecInfo->fMask = SEE_MASK_NOCLOSEPROCESS;
+  lpShExecInfo->hwnd = NULL;
+  lpShExecInfo->lpVerb = NULL;
+  lpShExecInfo->lpFile = strModuleFileName.c_str();
+  lpShExecInfo->lpParameters = strArgs.c_str();
+  lpShExecInfo->lpDirectory = TagsFilePath;
+  lpShExecInfo->nShow = SW_HIDE;
+  lpShExecInfo->hInstApp = NULL;
+
+  // std::string errMsg = " ";
+  // errMsg += lpShExecInfo.lpFile;
+  // errMsg += " ";
+  // errMsg += lpShExecInfo.lpParameters;
+  // errMsg += "\n\n in directory\n\n";
+  // errMsg += lpShExecInfo.lpDirectory;
+  // MessageBoxA(NULL, errMsg.c_str(), "Ready to generate ctags database", MB_OK | MB_ICONEXCLAMATION);
+
+  HANDLE hThread = CreateThread(NULL, 0, ShExecCtags, lpShExecInfo, 0, NULL);
+  errw = WaitForSingleObject(hThread, g_WaitTimeMsec);
+  CloseHandle(hThread);
+
+  HeapFree(GetProcessHeap(), 0, lpShExecInfo);
+
+  GetExitCodeProcess(lpShExecInfo->hProcess, &err);
+  if ( err != 0 && err != STILL_ACTIVE )
   {
-      std::string errMsg;
-      errMsg = strModuleFileName;
+      std::string errMsg = "[" + std::to_string(errw) + "] ";
+      errMsg += lpShExecInfo->lpFile;
       errMsg += " ";
-      errMsg += strArgs;
-      errMsg += " ";
-      errMsg += TagsFilePath;
-      errMsg += "\\tags";
-      MessageBoxA(NppHndl, errMsg.c_str(), "Cannot generate ctags database", MB_OK | MB_ICONEXCLAMATION);
+      errMsg += lpShExecInfo->lpParameters;
+      errMsg += "\n\n in directory\n\n";
+      errMsg += lpShExecInfo->lpDirectory;
+      MessageBoxA(NULL, errMsg.c_str(), "Cannot generate ctags database", MB_OK | MB_ICONEXCLAMATION);
   }
 }
 
@@ -201,7 +229,7 @@ void SetTagsFilePath(HWND NppHndl, NppCallContext *NppC, char *TagsFilePath)
   TCHAR Msg[2048];
 
   ::_sntprintf(Msg, ARRAY_SIZE(Msg),
-    TEXT("'tags' file not found on path of:\n%s\n\nCreate recursively? (No = Current file only)"), NppC->Path);
+    TEXT("'tags' file not found on path of:\n%s\n\nYES = Create recursively\nNO = Current file only\nCANCEL = do nothing"), NppC->Path);
   int response = ::MessageBox(NppHndl, Msg, TEXT("TagLEET"), MB_YESNOCANCEL | MB_ICONWARNING);
   if (response == IDYES)
   {
@@ -304,17 +332,19 @@ TagLeetApp::TagLeetApp(const struct NppData *NppDataObj)
                    iniFilePath );
   g_RecurseDirs  = ::GetPrivateProfileInt( sectionName, iniRecurseDirs, 1,
                    iniFilePath );
-  g_PeekPre      = ::GetPrivateProfileInt( sectionName, iniPeekPre, 2,
-                   iniFilePath );
-  g_PeekPost     = ::GetPrivateProfileInt( sectionName, iniPeekPost, 9,
-                   iniFilePath );
+  g_PeekPre      = ::GetPrivateProfileInt( sectionName, iniPeekPre,
+                   DEFAULT_PRE_LINES, iniFilePath );
+  g_PeekPost     = ::GetPrivateProfileInt( sectionName, iniPeekPost,
+                   DEFAULT_POST_LINES, iniFilePath );
+  g_WaitTimeMsec = ::GetPrivateProfileInt( sectionName, iniWaitTimeMsec,
+                   DEFAULT_WAIT_TIME_MSEC, iniFilePath );
   TCHAR globalTagsFile[TL_MAX_PATH];
-  ::GetPrivateProfileString( sectionName, iniGlobalTagsFile, TEXT("\0"), 
+  ::GetPrivateProfileString( sectionName, iniGlobalTagsFile, TEXT("\0"),
                              globalTagsFile, MAX_PATH, iniFilePath );
 
   DWORD fileOrDir = GetFileAttributes( globalTagsFile );
-  if ( ( globalTagsFile[0] != '\0' ) && 
-      ( ( fileOrDir == FILE_ATTRIBUTE_DIRECTORY ) || 
+  if ( ( globalTagsFile[0] != '\0' ) &&
+      ( ( fileOrDir == FILE_ATTRIBUTE_DIRECTORY ) ||
           ( fileOrDir == INVALID_FILE_ATTRIBUTES ) ) )
   {
       _tcscpy( globalTagsFile, TEXT("\0") );
@@ -368,6 +398,8 @@ void TagLeetApp::Shutdown()
   ::WritePrivateProfileString( sectionName, iniPeekPre, buf, iniFilePath );
   _itot_s( g_PeekPost, buf, 64, 10 );
   ::WritePrivateProfileString( sectionName, iniPeekPost, buf, iniFilePath );
+  _itot_s( g_WaitTimeMsec, buf, 64, 10 );
+  ::WritePrivateProfileString( sectionName, iniWaitTimeMsec, buf, iniFilePath );
 
   TCHAR globalTagsFile[TL_MAX_PATH];
   size_t nNumCharConverted;
@@ -1037,7 +1069,7 @@ void TagLeetApp::DeleteTags()
       err = LastTagFileGet(Path, ARRAY_SIZE(Path));
       if (err)
       {
-        MessageBox(NppHndl, TEXT("Current and last tag files not found."), 
+        MessageBox(NppHndl, TEXT("Current and last tag files not found."),
                    TEXT("File Not Found"), MB_ICONEXCLAMATION);
         return;
       }

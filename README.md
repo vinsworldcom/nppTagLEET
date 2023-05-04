@@ -37,10 +37,12 @@ For 64-bit:
 
 ## Installation
 
+TagLEET 1.4.1.1 and newer requires Notepad++ 8.4.6 or newer.
+
 Copy the:
 
-+ 32-bit:  ./bin/TagLEET.dll
-+ 64-bit:  ./bin64/TagLEET.dll
++ 32-bit:  ./Release/Win32/TagLEET.dll
++ 64-bit:  ./Release/x64/TagLEET.dll
 
 to the Notepad++ plugins folder:
   + In N++ <7.6, directly in the plugins/ folder
@@ -83,8 +85,9 @@ CTRL + NUMPAD(+)       | increase font size
 CTRL + NUMPAD(-)       | decrease font size
 CTRL + NUMPAD(/)       | reset font size
 NUMPAD(*)              | toggle default / N++ colors
-CTRL + NUMPAD(*)       | toggle Scintilla autocomplete
-CTRL + ALT + NUMPAD(*) | toggle update on save
+ALT + A                | toggle Scintilla Autocomplete
+ALT + R                | toggle Recurse Subdirectories
+ALT + S                | toggle Update on Save
 
 Update on save will auto update the current `tags` file after each file save.
 This does not take too much extra resources and makes the TagLEET experience 
