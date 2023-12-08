@@ -960,7 +960,7 @@ void TagLeetApp::SciAutoComplete()
         continue;
     prevWord = Item->Tag;
     wList += Item->Tag;
-    wList += "?";
+    wList += '\x1E';
     if (FromLocalFile)
         wList += STR(REGIMGIDL);
     else
@@ -975,7 +975,7 @@ void TagLeetApp::SciAutoComplete()
     return;
 
   SendMessage(NppC.SciHndl, SCI_AUTOCSETSEPARATOR, WPARAM(' '), 0 );
-  SendMessage(NppC.SciHndl, SCI_AUTOCSETTYPESEPARATOR, WPARAM('?'), 0 );
+  SendMessage(NppC.SciHndl, SCI_AUTOCSETTYPESEPARATOR, WPARAM('\x1E'), 0 );
   SendMessage(NppC.SciHndl, SCI_AUTOCSETIGNORECASE, true, 0 );
   SendMessage(NppC.SciHndl, SCI_REGISTERIMAGE, REGIMGIDL, (LPARAM)xpmTlL);
   SendMessage(NppC.SciHndl, SCI_REGISTERIMAGE, REGIMGIDG, (LPARAM)xpmTlG);
