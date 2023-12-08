@@ -92,7 +92,7 @@ extern "C" __declspec(dllexport) FuncItem * getFuncsArray(int *nbF)
     {false, true, false, VK_LEFT},
     {false, true, false, VK_RIGHT}};
   static struct FuncItem TagLeetFuncs[] = {
-    {_T("&Find Definition"), NppLookupTag,    0, false, TagLeetShortcuts},
+    {_T("Find Defi&nition"), NppLookupTag,    0, false, TagLeetShortcuts},
     {_T("Find &Reference"),  NppFindRefs,     0, false, NULL},
     {_T("Go &Back"),         NppGoBack,       0, false, TagLeetShortcuts + 1},
     {_T("Go &Forward"),      NppGoForward,    0, false, TagLeetShortcuts + 2},
