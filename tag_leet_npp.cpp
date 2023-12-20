@@ -96,11 +96,11 @@ extern "C" __declspec(dllexport) FuncItem * getFuncsArray(int *nbF)
     {_T("Find &Reference"),  NppFindRefs,     0, false, NULL},
     {_T("Go &Back"),         NppGoBack,       0, false, TagLeetShortcuts + 1},
     {_T("Go &Forward"),      NppGoForward,    0, false, TagLeetShortcuts + 2},
-    {_T("&Autocomplete"),    NppAutoComplete, 0, false, NULL},
-    {_T("&Delete Tags file"),NppDeleteTags,   0, false, NULL},
+    {_T("&AutoComplete"),    NppAutoComplete, 0, false, NULL},
+    {_T("&Delete Database"), NppDeleteTags,   0, false, NULL},
     {_T("-SEPARATOR-"),      NULL,            0, false, NULL},
-    {_T("&Settings"),        TagLeetSettings, 0, false, NULL},
-    {_T("Abou&t"),           TagLeetAbout,    0, false, NULL}};
+    {_T("&Settings..."),     TagLeetSettings, 0, false, NULL},
+    {_T("Abou&t..."),        TagLeetAbout,    0, false, NULL}};
 
   *nbF = ARRAY_SIZE(TagLeetFuncs);
   return TagLeetFuncs;
